@@ -55,26 +55,6 @@ class BaseModel extends MSSQL
     @_stack = {}
 
 
-  assign_filters: (filters, assignment) ->
-    # designate DB table names for use with given filters
-    arr = []
-    for key, value of filters
-      if assignment[key]?
-        if @typeof assignment[key], 'object'
-          # filter with additional properties
-          obj = assignment[key]
-          obj[key] = true
-          obj.value = value
-          arr.push obj
-        else # simple column-name filter
-          arr.push { column: key, table: assignment[key], value: value }
-      else
-        obj = {}
-        obj[key] = value
-        arr.push obj
-    arr
-
-
   attach: (collection, key) ->
     new Mangler collection, key
 

@@ -2,9 +2,10 @@
   "name": "mssql-model",
   "version": "0.0.1",
   "description": "Convenience layer for Express + MSSQL/Tedious",
-  "main": "dist/index.js",
+  "main": "dist/index.min.js",
+  "files": ["dist/"],
   "scripts": {
-    "test": "mocha"
+    "test": "grunt test"
   },
   "author": "DevMode, Inc.",
   "license": "ISC",
@@ -15,6 +16,11 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "grunt": "^1.0.1",
+    "grunt-contrib-clean": "^1.0.0",
+    "grunt-contrib-coffee": "^1.0.0",
+    "grunt-contrib-uglify": "^2.0.0",
+    "grunt-mocha-test": "^0.13.2",
     "mocha": "^3.2.0",
     "sinon": "^1.17.6"
   }

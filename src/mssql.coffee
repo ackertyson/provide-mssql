@@ -1,3 +1,4 @@
+crypto = require 'crypto'
 tedious = require 'tedious'
 Request = tedious.Request
 TYPES = tedious.TYPES
@@ -6,6 +7,8 @@ Promise = require 'promise'
 
 
 class MSSQL
+  @_cache: {} # static DB connection cache
+
   constructor: (@table_name, @schema, server, user_name, password, database) ->
     server ?= process.env.SQL_SERVER
     user_name ?= process.env.SQL_USERNAME
@@ -22,7 +25,16 @@ class MSSQL
     pool_config =
       min: 2
       max: 10
-    @pool = new ConnectionPool pool_config, config
+
+    # hash connection vars to check for or create cached connection
+    hash = crypto.createHash 'sha256'
+    hash.update "#{server}#{user_name}#{password}#{database}"
+    dbconn = hash.digest 'hex'
+    if @constructor._cache[dbconn]? # used cached connection
+      @pool = @constructor._cache[dbconn]
+    else # create new connection
+      @pool = new ConnectionPool pool_config, config
+      @constructor._cache[dbconn] = @pool
 
     pad = (number) ->
       number = number.toString()
@@ -71,9 +83,10 @@ class MSSQL
     items = []
     sql_params = []
     for item,i in params.insert
+      body = @sanitize item
       columns = []
       p_names = []
-      for own column, value of item
+      for own column, value of body
         columns.push "[#{column}]"
         [safe_column, sql_param] = @parameterize @table_name, column, value, i
         sql_params.push sql_param
@@ -85,9 +98,10 @@ class MSSQL
 
   build_update_query: (params) ->
     throw new Error "Build query: UPDATE query requires WHERE clause" unless params.where? and Object.keys(params.where)?.length > 0
+    body = @sanitize params.update
     updates = []
     sql_params = []
-    for own column, value of params.update
+    for own column, value of body
       [safe_column, sql_param] = @parameterize @table_name, column, value
       updates.push "[#{column}]=@#{safe_column}"
       sql_params.push sql_param
@@ -256,6 +270,14 @@ class MSSQL
           data.push row
 
         connection.execSql request
+
+
+  sanitize: (body) ->
+    throw new Error "No schema found for #{table_name}" unless @schema? and Object.keys(@schema).length > 0
+    sanitized = {}
+    for own column, value of body
+      sanitized[column] = value if @schema[column]?
+    sanitized
 
 
   typeof: (subject, type) ->

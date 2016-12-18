@@ -138,9 +138,11 @@ describe 'MSSQL', ->
         insert:
           name: 'new name'
           date: '2016-12-01'
+          junk: 'ignore this'
       query.should.equal "INSERT INTO [test] ([name],[date]) OUTPUT INSERTED.* VALUES (@name0,@date0)"
       params.should.have.length 2
       params[0].value.should.equal 'new name'
+      params[0].should.not.have.property 'junk'
 
     it 'should build INSERT query with multiple items', ->
       [query, params] = @mssql.build_query
@@ -152,17 +154,20 @@ describe 'MSSQL', ->
           {
             name: 'new name2'
             date: '2016-12-02'
+            junk: 'ignore this'
           }
         ]
       query.should.equal "INSERT INTO [test] ([name],[date]) OUTPUT INSERTED.* VALUES (@name0,@date0),(@name1,@date1)"
       params.should.have.length 4
       params[2].value.should.equal 'new name2'
+      params[2].should.not.have.property 'junk'
 
     it 'should build UPDATE query', ->
       [query, params] = @mssql.build_query
         update:
           name: 'new name'
           date: '2016-12-01'
+          junk: 'ignore this'
         where:
           _id: Model.eq 1234
       query.should.equal "UPDATE [test] SET [name]=@name,[date]=@date OUTPUT INSERTED.* WHERE [_id] = @id"
