@@ -1,0 +1,5 @@
+--compilers coffee:coffee-script/register
+--require test/setup.coffee
+--recursive
+--reporter spec
+--ui bdd

@@ -1,0 +1,21 @@
+{
+  "name": "mssql-model",
+  "version": "0.0.1",
+  "description": "Convenience layer for Express + MSSQL/Tedious",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "DevMode, Inc.",
+  "license": "ISC",
+  "dependencies": {
+    "promise": "^7.1.1",
+    "tedious": "^1.14.0",
+    "tedious-connection-pool": "^1.0.5"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
+    "sinon": "^1.17.6"
+  }
+}
