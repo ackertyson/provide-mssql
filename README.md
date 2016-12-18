@@ -1,6 +1,11 @@
 #mssql-model
 
-JSON model layer for MSSQL/Tedious database in Express apps.
+JSON model layer for Microsoft SQL Server (via Tedious) database in Express
+apps. *This module is not yet ready for production environments.*
+
+##Installation
+
+`npm i --save mssql-model`
 
 ##Usage
 
@@ -53,29 +58,12 @@ class TicketModel
         '@.customer_id': Model.eq id
     yield @request params
 
-# set DB table name to TICKET for this model...
+# set DB table name to 'ticket' for this model...
 module.exports = Model.provide TicketModel, 'ticket'
 ```
 
-Here's a more complex query example:
-```
-params =
-  select:
-    table1: ['column1']
-  join: [
-    ['table1._id', 'table2.vehicle_id']
-  ]
-  where:
-    '@._id': Model.eq 1234
-  order_by: ['column1']
-```
-...becomes....
-```
-SELECT table1.column1,test.*
-FROM test,table1
-  LEFT JOIN table2 ON table1._id = table2.vehicle_id
-WHERE [test].[_id] = @id
-ORDER BY column1
-```
-Notice how the model base table (as passed to Model.provide, in this case
-`test`) is added to the `SELECT` clause by default.
+See `test/mssql.coffee` for more query examples.
+
+##Testing
+
+`npm test`
