@@ -1,7 +1,7 @@
 #mssql-model
 
 JSON model layer for Microsoft SQL Server (via Tedious) database in Express
-apps. *This module is not yet ready for production environments.*
+apps.
 
 ##Installation
 
@@ -34,6 +34,7 @@ Model (called from handler):
 class TicketModel
   # whitelist of valid DB table columns and their datatypes...
   schema:
+    primary_key: '_id' # exclude PK from body of INSERT/UPDATE queries (see below)
     _id: 'Int'
     customer_id: 'VarChar'
     received_date: 'Date'
@@ -61,6 +62,10 @@ class TicketModel
 # set DB table name to 'ticket' for this model...
 module.exports = Model.provide TicketModel, 'ticket'
 ```
+
+Notice how we define a `primary_key` in the schema--this is to exclude that
+column (`_id` in this example) from the fields affected by INSERT/UPDATE
+queries, as we don't actually want to change that value.
 
 See `test/mssql.coffee` for more query examples.
 
