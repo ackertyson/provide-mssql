@@ -4,6 +4,7 @@ Model = require '../src/model'
 describe 'MSSQL', ->
   before (done) ->
     schema =
+      primary_key: '_id'
       _id: 'Int'
       date: 'Date'
       name: 'VarChar'

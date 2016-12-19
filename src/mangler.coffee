@@ -12,6 +12,8 @@ class Mangler
 
   _attach_by_key: (host, host_key, parasite, parasite_key, attach_as_key, include_keys=[]) ->
     # attach items from PARASITE array on corresponding item(s) of HOST array at key specified by ATTACH_AS_KEY
+    throw new Error "attach_by_key: no HOST collection" unless host?
+    throw new Error "attach_by_key: no PARASITE collection" unless parasite?
     p = new Map
     parasite.forEach (item) ->
       if include_keys.length > 0 # only include specified keys

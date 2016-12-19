@@ -26,6 +26,10 @@ class MSSQL
       min: 2
       max: 10
 
+    if @schema?.primary_key?
+      @primary_key = @schema.primary_key
+      delete @schema.primary_key
+
     # hash connection vars to check for or create cached connection
     hash = crypto.createHash 'sha256'
     hash.update "#{server}#{user_name}#{password}#{database}"
@@ -278,8 +282,8 @@ class MSSQL
   sanitize: (body) ->
     throw new Error "No schema found for #{table_name}" unless @schema? and Object.keys(@schema).length > 0
     sanitized = {}
-    for own column, value of body
-      sanitized[column] = value if @schema[column]?
+    for own column, value of body # leave PRIMARY_KEY (if defined) out of sanitized body
+      sanitized[column] = value if @schema[column]? and (@primary_key? and column isnt @primary_key)
     sanitized
 
 
