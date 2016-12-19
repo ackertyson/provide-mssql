@@ -242,8 +242,11 @@ class MSSQL
 
 
   request: (query, params...) =>
-    [query, params] = @build_query query if @typeof query, 'object'
     new Promise (resolve, reject) =>
+      try
+        [query, params] = @build_query query if @typeof query, 'object'
+      catch ex
+        reject @error_msg ex, query, params...
       data = []
       @pool.acquire (err, connection) =>
         reject @error_msg err, query, params... if err?
