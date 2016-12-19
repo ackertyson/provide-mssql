@@ -25,7 +25,7 @@ class BaseModel extends MSSQL
     new Mangler collection, key
 
 
-  list_from_key: (data, extract_columns...) ->
+  list_of_key: (data, extract_columns...) ->
     # return array of specified column(s) from provided resultset (which is an array of objects)
     if data? and data.length
       arr = []

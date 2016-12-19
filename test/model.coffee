@@ -46,14 +46,14 @@ describe 'Base Model', ->
       result[2].should.not.have.property 'crap'
 
 
-  describe 'list_from_key', ->
+  describe 'list_of_key', ->
     it 'should create array of KEY from resultset', ->
       data = [
         { id: 1234, name: 'one', p_id: 4 }
         { id: 5678, name: 'two', p_id: 8 }
         { id: 9101, name: 'three', p_id: 12 }
       ]
-      result = @base.list_from_key data, 'id'
+      result = @base.list_of_key data, 'id'
       result.should.have.length 3
       result[0].should.equal 1234
       result[1].should.equal 5678
@@ -65,7 +65,7 @@ describe 'Base Model', ->
         { id: 5678, name: 'two', p_id: 8 }
         { id: 9101, name: 'three', p_id: 12 }
       ]
-      result = @base.list_from_key data, 'id', 'name'
+      result = @base.list_of_key data, 'id', 'name'
       result.should.have.length 2
       [ids, names] = result
       ids[0].should.equal 1234
