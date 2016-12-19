@@ -1,58 +1,24 @@
 MSSQL = require './mssql'
-
-class Mangler
-  # convenient combination of DB resultsets (arrays of objects)
-
-  constructor: (@parasite, @parasite_key) -> @
-
-  as: (@as_key) =>
-    @_attach_by_key @host, @host_key, @parasite, @parasite_key, @as_key, @include_keys
-
-  pick: (@include_keys...) => @
-
-  to: (@host, @host_key) => @
-
-  _attach_by_key: (host, host_key, parasite, parasite_key, attach_as_key, include_keys=[]) ->
-    # attach items from PARASITE array on corresponding item(s) of HOST array at key specified by ATTACH_AS_KEY
-    p = new Map
-    parasite.forEach (item) ->
-      if include_keys.length > 0 # only include specified keys
-        obj = {}
-        for key in include_keys
-          obj[key] = item[key]
-        p.set item[parasite_key], obj
-      else # include all PARASITE keys
-        p.set item[parasite_key], item
-    host.forEach (item) ->
-      item[attach_as_key] = p.get item[host_key] if p.has item[host_key]
-    host
-
-  _attach_collection_by_key: (host, host_key, parasite, parasite_key, attach_as_key, include_keys=[]) ->
-    # collect attached items in array(s)
-    p = new Map
-    parasite.forEach (item) ->
-      p.set item[parasite_key], [] unless p.has item[parasite_key]
-      if include_keys.length > 0 # only include specified keys
-        obj = {}
-        for key in include_keys
-          obj[key] = item[key]
-        arr = p.get item[parasite_key]
-        arr.push obj
-        p.set item[parasite_key], arr
-      else # include all PARASITE keys
-        arr = p.get(item[parasite_key])
-        arr.push item
-        p.set item[parasite_key], arr
-    host.forEach (item) ->
-      item[attach_as_key] = p.get item[host_key] if p.has item[host_key]
-    host
-
+Mangler = require './mangler'
 
 class BaseModel extends MSSQL
   constructor: (name, schema) ->
     super name, schema
     Promise::parallel = @promise_all_from_obj
-    @_stack = {}
+
+
+  # these functions assume that FILTERS is an array which *may* contain an object as the sole element
+  has_filter: (filters, key) -> filters[0]?[key] or false
+  get_filter: (args...) -> @has_filter args...
+  pop_filter: (filters, key) ->
+    value = @has_filter filters, key
+    delete filters[0][key] if value
+    return value
+  set_filter: (filters, key, value, safe=false) ->
+    if filters[0]?
+      filters[0][key] = value unless filters[0][key]? and safe
+    else
+      filters = [{ key: value }]
 
 
   attach: (collection, key) ->
