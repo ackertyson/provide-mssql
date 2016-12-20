@@ -2,6 +2,10 @@
   "name": "provide-mssql",
   "version": "0.0.2",
   "description": "Convenience layer for MSSQL/Tedious DB in Express app",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:ackertyson/provide-mssql.git"
+  },
   "main": "dist/index.min.js",
   "files": [
     "dist/"

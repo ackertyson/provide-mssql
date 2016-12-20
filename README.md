@@ -11,7 +11,7 @@ apps.
 
 Model (called from Express handler):
 ```
-{ Model } = require 'mssql-model'
+Model = require 'provide-mssql'
 
 class TicketModel
   # whitelist of valid DB table columns and their datatypes...
@@ -48,6 +48,9 @@ module.exports = Model.provide TicketModel, 'ticket'
 Notice how we define a `primary_key` in the schema--this is to exclude that
 column (`_id` in this example) from the fields affected by INSERT/UPDATE
 queries, as we don't actually want to change that value.
+
+Also note that model methods use "fat-arrow" to preserve context (so `this`
+refers to the local class).
 
 See `test/mssql.coffee` for more query examples. If you run into a query that
 won't build properly, just pass it as a string (with optional params):
