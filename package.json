@@ -1,9 +1,11 @@
 {
   "name": "provide-mssql",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Convenience layer for MSSQL/Tedious DB in Express app",
   "main": "dist/index.min.js",
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "test": "grunt test"
   },
