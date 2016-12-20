@@ -8,6 +8,7 @@ Promise = require 'promise'
 
 class MSSQL
   @_cache: {} # static DB connection cache
+  @_all_schema: {} # static SCHEMA store of all models
 
   constructor: (@table_name, @schema, server, user_name, password, database) ->
     server ?= process.env.SQL_SERVER
@@ -29,6 +30,7 @@ class MSSQL
     if @schema?.primary_key?
       @primary_key = @schema.primary_key
       delete @schema.primary_key
+    @constructor._all_schema[@table_name] = @schema or {} # make SCHEMA available to other models
 
     # hash connection vars to check for or create cached connection
     hash = crypto.createHash 'sha256'
@@ -237,11 +239,15 @@ class MSSQL
 
 
   parameterize: (table, column, value, tag='') ->
-    column = "#{table}.#{column}" if table isnt @table_name
-    throw new Error "MSSQL: #{@table_name}: no schema definition found for #{column}" unless @schema?[column]?
+    if table is @table_name # use this model's schema
+      type = @schema[column] if @schema?
+    else # check other model schema
+      type = @constructor._all_schema[table]?[column]
+      column = "#{table}.#{column}"
+    throw new Error "MSSQL: #{@table_name} model: no schema definition found for #{column}" unless type?
     safe_column = column.replace /[^a-zA-Z0-9]/g, '' # strip all non-alphanumeric characters
     safe_column = safe_column + tag.toString() if tag.toString().length > 0
-    sql_param = @build_param safe_column, @schema[column], value
+    sql_param = @build_param safe_column, type, value
     [safe_column, sql_param]
 
 

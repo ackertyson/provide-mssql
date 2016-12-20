@@ -1,7 +1,7 @@
 class HandlerProvider
   # centralize all Express handler response logic by wrapping handler methods in
   #  helper function; note that these are static (not instance) methods...
-  
+
   @provide: (Handler, name, schema) ->
     h = new Handler
     @_wrap h
@@ -25,7 +25,8 @@ class HandlerProvider
       callback(req).then (data) ->
         res.status(200).json data
       .catch (err) ->
-        res.status(500).json err
+        code = err.code or 500
+        res.status(code).json err
 
 
 module.exports = HandlerProvider

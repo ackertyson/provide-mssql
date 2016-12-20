@@ -15,8 +15,8 @@ Handler (called by Express route):
 Ticket = require '../models/ticket'
 
 class TicketHandler
-  # req, res, next are passed from Express; here we're dereferencing BODY from
-  # req because it's all we need...
+  # req is passed from Express; here we're dereferencing BODY from req
+  #  because it's all we need...
   get: ({ body }) ->
     Ticket.all body._filters
 
@@ -67,7 +67,19 @@ Notice how we define a `primary_key` in the schema--this is to exclude that
 column (`_id` in this example) from the fields affected by INSERT/UPDATE
 queries, as we don't actually want to change that value.
 
-See `test/mssql.coffee` for more query examples.
+See `test/mssql.coffee` for more query examples. If you run into a query that
+won't build properly, just pass it as a string (with optional params):
+
+```
+model_method_with_challenging query: (item_id) =>
+  query = """SELECT *
+    FROM table1
+    LEFT JOIN table2 ON table1.field1 = table2.field1
+      AND table1.field2 = table2.field2
+    WHERE table1.id = @id"""
+
+  yield @request query, @build_param 'id', 'Int', item_id
+```
 
 ##Testing
 
