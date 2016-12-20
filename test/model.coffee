@@ -1,4 +1,4 @@
-Model = require '../src/model'
+Model = require '../src/index'
 
 describe 'Base Model', ->
   before (done) ->

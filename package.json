@@ -1,13 +1,13 @@
 {
-  "name": "mssql-model",
+  "name": "provide-mssql",
   "version": "0.0.1",
-  "description": "Convenience layer for Express + MSSQL/Tedious",
+  "description": "Convenience layer for MSSQL/Tedious DB in Express app",
   "main": "dist/index.min.js",
   "files": ["dist/"],
   "scripts": {
     "test": "grunt test"
   },
-  "author": "DevMode, Inc.",
+  "author": "tyson@devmode.com",
   "license": "ISC",
   "dependencies": {
     "promise": "^7.1.1",

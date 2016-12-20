@@ -1,5 +1,5 @@
 MSSQL = require '../src/mssql'
-Model = require '../src/model'
+Model = require '../src/index'
 
 describe 'MSSQL', ->
   before (done) ->

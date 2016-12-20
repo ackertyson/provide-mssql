@@ -1,33 +1,15 @@
-#mssql-model
+#provide-mssql
 
 JSON model layer for Microsoft SQL Server (via Tedious) database in Express
 apps.
 
 ##Installation
 
-`npm i --save mssql-model`
+`npm i --save provide-mssql`
 
 ##Usage
 
-Handler (called by Express route):
-```
-{ Handler } = require 'mssql-model'
-Ticket = require '../models/ticket'
-
-class TicketHandler
-  # req is passed from Express; here we're dereferencing BODY from req
-  #  because it's all we need...
-  get: ({ body }) ->
-    Ticket.all body._filters
-
-  # ...and here we only need req.params....
-  for_customer: ({ params }) ->
-    Ticket.find_by_customer params.customer_id
-
-module.exports = Handler.provide TicketHandler
-```
-
-Model (called from handler):
+Model (called from Express handler):
 ```
 { Model } = require 'mssql-model'
 
