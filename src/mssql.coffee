@@ -289,7 +289,7 @@ class MSSQL
     throw new Error "No schema found for #{table_name}" unless @schema? and Object.keys(@schema).length > 0
     sanitized = {}
     for own column, value of body # leave PRIMARY_KEY (if defined) out of sanitized body
-      sanitized[column] = value if @schema[column]? and not (@primary_key? and column isnt @primary_key)
+      sanitized[column] = value if @schema[column]? and not (@primary_key? and column is @primary_key)
     sanitized
 
 
