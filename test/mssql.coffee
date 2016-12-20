@@ -8,7 +8,9 @@ describe 'MSSQL', ->
       _id: 'Int'
       date: 'Date'
       name: 'VarChar'
-      'table1.name': 'VarChar'
+    table1_schema =
+      name: 'VarChar'
+    dummy = new MSSQL 'table1', table1_schema
     @mssql = new MSSQL 'test', schema
     done()
 
