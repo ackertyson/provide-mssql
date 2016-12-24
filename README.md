@@ -38,11 +38,11 @@ class TicketModel
         ['@.customer_id', 'customer._id']
       ]
       where:
-        '@.customer_id': Model.eq id
+        '@.customer_id': model.eq id
     yield @request params
 
 # set DB table name to 'ticket' for this model...
-module.exports = provide TicketModel, 'ticket'
+module.exports = model.provide TicketModel, 'ticket'
 ```
 
 Notice how we define a `primary_key` in the schema--this is to exclude that
