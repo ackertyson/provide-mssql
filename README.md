@@ -9,7 +9,7 @@ apps.
 
 ##Usage
 
-Model (called from Express handler):
+Model (called from Express handler--for which consider [provide-handler](https://www.npmjs.com/package/provide-handler)):
 ```
 model = require 'provide-mssql'
 
