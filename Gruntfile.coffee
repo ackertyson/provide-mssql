@@ -12,6 +12,7 @@ module.exports = (grunt) ->
         src: '*.coffee'
         dest: 'dist/'
         ext: '.js'
+        sourceMap: true
 
     mochaTest:
       test:

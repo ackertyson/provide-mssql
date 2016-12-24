@@ -5,12 +5,11 @@ TYPES = tedious.TYPES
 ConnectionPool = require 'tedious-connection-pool'
 Promise = require 'promise'
 
-
 class MSSQL
   @_cache: {} # static DB connection cache
   @_all_schema: {} # static SCHEMA store of all models
 
-  constructor: (@table_name, @schema, server, user_name, password, database) ->
+  constructor: (@schema, @table_name, server, user_name, password, database) ->
     server ?= process.env.SQL_SERVER
     user_name ?= process.env.SQL_USERNAME
     password ?= process.env.SQL_PASSWORD
@@ -42,12 +41,27 @@ class MSSQL
       @pool = new ConnectionPool pool_config, config
       @constructor._cache[dbconn] = @pool
 
-    pad = (number) ->
+    _pad = (number) ->
       number = number.toString()
       return number unless number.length is 1
       return '0' + number
     Date::to_mssql_string = () ->
-      @getUTCFullYear()+'-'+pad(@getUTCMonth()+1)+'-'+pad(@getUTCDate())+' '+pad(@getUTCHours())+':'+pad(@getUTCMinutes())+':'+pad(@getUTCSeconds())
+      @getUTCFullYear()+'-'+_pad(@getUTCMonth()+1)+'-'+_pad(@getUTCDate())+' '+_pad(@getUTCHours())+':'+_pad(@getUTCMinutes())+':'+_pad(@getUTCSeconds())
+
+
+  # WHERE clause operators
+  contains: (value) -> ['LIKE ', '%'+value+'%']
+  ends_with: (value) -> ['LIKE ', '%'+value]
+  eq: (value) -> ['=', value]
+  gt: (value) -> ['>', value]
+  gte: (value) -> ['>=', value]
+  in: (values) ->
+    values = [values] unless Array.isArray values
+    #TODO sanitize values
+    ['IN', "(#{values.join ','})"]
+  lt: (value) -> ['<', value]
+  lte: (value) -> ['<=', value]
+  starts_with: (value) -> ['LIKE ', value+'%']
 
 
   build_filters: (query, raw_filters) ->

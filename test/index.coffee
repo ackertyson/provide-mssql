@@ -1,16 +1,21 @@
-Model = require '../src/index'
+Model = require 'provide-model'
 
 describe 'Base Model', ->
   before (done) ->
     class ModelX
+      @schema:
+        one: 'two'
       methodA: (arg) ->
         yield Promise.resolve "A #{arg}"
       methodB: (arg) ->
         yield Promise.resolve "B #{arg}"
       methodC: (arg) ->
         yield Promise.reject new Error "C #{arg}"
-    @X = ModelX
-    @base = Model.provide @X
+    class ModelY
+      methodD: (arg) ->
+        yield Promise.resolve "D #{arg}"
+    @m = new Model ModelY
+    @model = @m.provide ModelX, 'fake'
     done()
 
 

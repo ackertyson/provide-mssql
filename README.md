@@ -11,7 +11,7 @@ apps.
 
 Model (called from Express handler):
 ```
-Model = require 'provide-mssql'
+model = require 'provide-mssql'
 
 class TicketModel
   # whitelist of valid DB table columns and their datatypes...
@@ -42,7 +42,7 @@ class TicketModel
     yield @request params
 
 # set DB table name to 'ticket' for this model...
-module.exports = Model.provide TicketModel, 'ticket'
+module.exports = provide TicketModel, 'ticket'
 ```
 
 Notice how we define a `primary_key` in the schema--this is to exclude that
