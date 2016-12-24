@@ -9,8 +9,8 @@ describe 'MSSQL', ->
       name: 'VarChar'
     table1_schema =
       name: 'VarChar'
-    dummy = new MSSQL 'table1', table1_schema
-    @mssql = new MSSQL 'test', schema
+    dummy = new MSSQL table1_schema, 'table1'
+    @mssql = new MSSQL schema, 'test'
     done()
 
   describe 'build_query', ->
