@@ -17,7 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "promise": "^7.1.1",
-    "provide-model": "file:../provide-model",
+    "provide-model": "0.0.2",
     "tedious": "^1.14.0",
     "tedious-connection-pool": "^1.0.5"
   },
