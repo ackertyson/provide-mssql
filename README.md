@@ -15,7 +15,7 @@ model = require 'provide-mssql'
 
 class TicketModel
   # whitelist of valid DB table columns and their datatypes...
-  schema:
+  @schema:
     primary_key: '_id' # exclude PK from body of INSERT/UPDATE queries (see below)
     _id: 'Int'
     customer_id: 'VarChar'
@@ -42,7 +42,7 @@ class TicketModel
     yield @request params
 
 # set DB table name to 'ticket' for this model...
-module.exports = model.provide TicketModel, 'ticket'
+module.exports = model.provide TicketModel, TicketModel.schema, 'ticket'
 ```
 
 Notice how we define a `primary_key` in the schema--this is to exclude that
