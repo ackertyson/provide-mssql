@@ -13,6 +13,14 @@ describe 'MSSQL', ->
     @mssql = new MSSQL schema, 'test'
     done()
 
+
+  describe 'contains', ->
+    it 'should clean up bad inputs', ->
+      value = @mssql.contains 'bad\\,stuff'
+      value.should.have.length 2
+      value[1].should.equal "\'%badstuff%\'"
+
+
   describe 'build_query', ->
     it 'should build simple query', ->
       [query, params] = @mssql.build_query
@@ -211,3 +219,25 @@ describe 'MSSQL', ->
       query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id0"
       params.should.have.length 1
       params[0].value.should.equal 1234
+
+
+  describe 'strip_bad_chars', ->
+    it 'should pass good string unaltered', ->
+      value = @mssql.strip_bad_chars 'abra'
+      value.should.equal 'abra'
+
+    it 'should strip simple symbols', ->
+      value = @mssql.strip_bad_chars 'ab+ra'
+      value.should.equal 'abra'
+
+    it 'should strip slashes and single-quote', ->
+      value = @mssql.strip_bad_chars "ab'r\a"
+      value.should.equal 'abra'
+
+    it 'should strip backslashes and double-quote', ->
+      value = @mssql.strip_bad_chars '\/ab\\"ra/'
+      value.should.equal 'abra'
+
+    it 'should handle being passed a RegExp', ->
+      value = @mssql.strip_bad_chars /ab\\"ra/
+      value.should.equal 'abra'

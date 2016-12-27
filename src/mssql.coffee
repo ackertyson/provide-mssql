@@ -47,18 +47,18 @@ class MSSQL
 
 
   # WHERE clause operators
-  contains: (value) -> ['LIKE', "'%#{value}%'"]
-  ends_with: (value) -> ['LIKE', "'%#{value}'"]
+  contains: (value) -> ['LIKE', "'%#{@strip_bad_chars value}%'"]
+  ends_with: (value) -> ['LIKE', "'%#{@strip_bad_chars value}'"]
   eq: (value) -> ['=', value]
   gt: (value) -> ['>', value]
   gte: (value) -> ['>=', value]
   in: (values) ->
     values = [values] unless Array.isArray values
-    #TODO sanitize values
-    ['IN', "(#{values.join ','})"]
+    safe_values = (@strip_bad_chars value for value in values)
+    ['IN', "(#{safe_values.join ','})"]
   lt: (value) -> ['<', value]
   lte: (value) -> ['<=', value]
-  starts_with: (value) -> ['LIKE', "'#{value}%'"]
+  starts_with: (value) -> ['LIKE', "'#{@strip_bad_chars value}%'"]
 
 
   build_filters: (query, raw_filters) ->
@@ -305,6 +305,10 @@ class MSSQL
     for own column, value of body # leave PRIMARY_KEY (if defined) out of sanitized body
       sanitized[column] = value if @schema[column]? and not (@primary_key? and column is @primary_key)
     sanitized
+
+
+  strip_bad_chars: (value) -> # remove all non-alphanumeric except underscore, space and hyphen
+    value.toString().replace /[^-_ a-zA-Z0-9]/g, ''
 
 
   typeof: (subject, type) ->
