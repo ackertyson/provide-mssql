@@ -31,15 +31,12 @@ class MSSQL
       delete @schema.primary_key
     @constructor._all_schema[@table_name] = @schema or {} # make SCHEMA available to other models
 
-    # hash connection vars to check for or create cached connection
+    # hash connection params to find/create cached connection
     hash = crypto.createHash 'sha256'
     hash.update "#{server}#{user_name}#{password}#{database}"
     dbconn = hash.digest 'hex'
-    if @constructor._cache[dbconn]? # used cached connection
-      @pool = @constructor._cache[dbconn]
-    else # create new connection
-      @pool = new ConnectionPool pool_config, config
-      @constructor._cache[dbconn] = @pool
+    @constructor._cache[dbconn] ?= new ConnectionPool pool_config, config
+    @pool = @constructor._cache[dbconn]
 
     _pad = (number) ->
       number = number.toString()
@@ -50,8 +47,8 @@ class MSSQL
 
 
   # WHERE clause operators
-  contains: (value) -> ['LIKE ', '%'+value+'%']
-  ends_with: (value) -> ['LIKE ', '%'+value]
+  contains: (value) -> ['LIKE', "'%#{value}%'"]
+  ends_with: (value) -> ['LIKE', "'%#{value}'"]
   eq: (value) -> ['=', value]
   gt: (value) -> ['>', value]
   gte: (value) -> ['>=', value]
@@ -61,7 +58,7 @@ class MSSQL
     ['IN', "(#{values.join ','})"]
   lt: (value) -> ['<', value]
   lte: (value) -> ['<=', value]
-  starts_with: (value) -> ['LIKE ', value+'%']
+  starts_with: (value) -> ['LIKE', "'#{value}%'"]
 
 
   build_filters: (query, raw_filters) ->
@@ -85,11 +82,12 @@ class MSSQL
 
     where_clause = ''
     oper = 'WHERE'
-    for table_column, criterion of params.where
+    for set, i in params.where
+      [table_column, criterion] = set
       [table, column] = table_column.split '.'
       [comparator, value] = criterion
       column = table unless column? # drop table name if any provided (DELETE can only be run on model's base table)
-      [safe_column, sql_param] = @parameterize @table_name, column, value
+      [safe_column, sql_param] = @parameterize @table_name, column, value, i
       where_clause += "#{oper} [#{column}] #{comparator} @#{safe_column}"
       sql_params.push sql_param
       oper = ' AND'
@@ -128,11 +126,12 @@ class MSSQL
 
     where_clause = ''
     oper = 'WHERE'
-    for table_column, criterion of params.where
+    for set, i in params.where
+      [table_column, criterion] = set
       [table, column] = table_column.split '.'
       [comparator, value] = criterion
       column = table unless column? # drop table name if any provided (UPDATE can only be run on model's base table)
-      [safe_column, sql_param] = @parameterize @table_name, column, value
+      [safe_column, sql_param] = @parameterize @table_name, column, value, i
       where_clause += "#{oper} [#{column}] #{comparator} @#{safe_column}"
       sql_params.push sql_param
       oper = ' AND'
@@ -199,16 +198,17 @@ class MSSQL
 
     where_clause = ''
     sql_params = []
-    if params.where? and Object.keys(params.where)?.length > 0
+    if params.where?.length > 0
       oper = 'WHERE'
-      for table_column, criterion of params.where
+      for set, i in params.where
+        [table_column, criterion] = set
         [table, column] = table_column.split '.'
         table = @table_name if table is '@'
         [comparator, value] = criterion
-        if comparator in ['IN', 'LIKE'] # don't use parameters
+        if comparator.toUpperCase() in ['IN', 'LIKE'] # don't use parameters
           where_clause += "#{oper} [#{table}].[#{column}] #{comparator} #{value}"
         else
-          [safe_column, sql_param] = @parameterize table, column, value
+          [safe_column, sql_param] = @parameterize table, column, value, i
           where_clause += "#{oper} [#{table}].[#{column}] #{comparator} @#{safe_column}"
           sql_params.push sql_param
         oper = ' AND'

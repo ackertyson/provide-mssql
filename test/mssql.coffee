@@ -87,9 +87,10 @@ describe 'MSSQL', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
-        where:
-          '@._id': @mssql.eq 1234
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id"
+        where: [
+          ['@._id', @mssql.eq 1234]
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0"
       params.should.have.length 1
       params[0].value.should.equal 1234
 
@@ -97,7 +98,7 @@ describe 'MSSQL', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
-        where: {}
+        where: []
       query.should.equal "SELECT table1.column1,test.* FROM table1,test"
       params.should.have.length 0
 
@@ -105,7 +106,7 @@ describe 'MSSQL', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
-        where: []
+        where: {}
       query.should.equal "SELECT table1.column1,test.* FROM table1,test"
       params.should.have.length 0
 
@@ -113,10 +114,11 @@ describe 'MSSQL', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
-        where:
-          '@._id': @mssql.eq 1234
-          'table1.name': @mssql.lt 'fred'
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id AND [table1].[name] < @table1name"
+        where: [
+          ['@._id', @mssql.eq 1234]
+          ['table1.name', @mssql.lt 'fred']
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 AND [table1].[name] < @table1name1"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -127,12 +129,13 @@ describe 'MSSQL', ->
         join: [
           ['table1._id', 'table2.vehicle_id']
         ]
-        where:
-          '@._id': @mssql.eq 1234
-          'table1.name': @mssql.contains 'fred'
+        where: [
+          ['@._id', @mssql.eq 1234]
+          ['table1.name', @mssql.contains 'fred']
+        ]
         order_by: ['column1']
-      query.should.equal "SELECT table1.column1,test.* FROM test,table1 LEFT JOIN table2 ON table1._id = table2.vehicle_id WHERE [test].[_id] = @id AND [table1].[name] LIKE  @table1name ORDER BY column1"
-      params.should.have.length 2
+      query.should.equal "SELECT table1.column1,test.* FROM test,table1 LEFT JOIN table2 ON table1._id = table2.vehicle_id WHERE [test].[_id] = @id0 AND [table1].[name] LIKE '%fred%' ORDER BY column1"
+      params.should.have.length 1
       params[0].value.should.equal 1234
 
     it 'should build INSERT query', ->
@@ -170,9 +173,10 @@ describe 'MSSQL', ->
           name: 'new name'
           date: '2016-12-01'
           junk: 'ignore this'
-        where:
-          _id: @mssql.eq 1234
-      query.should.equal "UPDATE [test] SET [name]=@name,[date]=@date OUTPUT INSERTED.* WHERE [_id] = @id"
+        where: [
+          ['@._id', @mssql.eq 1234]
+        ]
+      query.should.equal "UPDATE [test] SET [name]=@name,[date]=@date OUTPUT INSERTED.* WHERE [_id] = @id0"
       params.should.have.length 3
       params[0].value.should.equal 'new name'
 
@@ -181,26 +185,29 @@ describe 'MSSQL', ->
         update:
           name: 'new name'
           date: '2016-12-01'
-        where:
-          'table_name._id': @mssql.eq 1234
-      query.should.equal "UPDATE [test] SET [name]=@name,[date]=@date OUTPUT INSERTED.* WHERE [_id] = @id"
+        where: [
+          ['table_name._id', @mssql.eq 1234]
+        ]
+      query.should.equal "UPDATE [test] SET [name]=@name,[date]=@date OUTPUT INSERTED.* WHERE [_id] = @id0"
       params.should.have.length 3
       params[0].value.should.equal 'new name'
 
     it 'should build DELETE query', ->
       [query, params] = @mssql.build_query
         delete: {}
-        where:
-          _id: @mssql.eq 1234
-      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id"
+        where: [
+          ['@._id', @mssql.eq 1234]
+        ]
+      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id0"
       params.should.have.length 1
       params[0].value.should.equal 1234
 
     it 'should ignore WHERE table in DELETE query', ->
       [query, params] = @mssql.build_query
         delete: {}
-        where:
-          'table_name._id': @mssql.eq 1234
-      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id"
+        where: [
+          ['table_name._id', @mssql.eq 1234]
+        ]
+      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id0"
       params.should.have.length 1
       params[0].value.should.equal 1234

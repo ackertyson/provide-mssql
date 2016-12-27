@@ -37,8 +37,9 @@ class TicketModel
       join: [
         ['@.customer_id', 'customer._id']
       ]
-      where:
-        '@.customer_id': model.eq id
+      where: [
+        ['@.customer_id', model.eq id]
+      ]
     yield @request params
 
 # set DB table name to 'ticket' for this model...
