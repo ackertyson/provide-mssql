@@ -175,17 +175,18 @@ class MSSQL
         tableA = @table_name if tableA is '@'
         tableB = @table_name if tableB is '@'
         target = tableB
-        if i is 0 # move first join table to end of FROM clause
-          make_last = tableA
-        else
-          ia = from_tables.indexOf(tableA)
-          from_tables.splice ia, 1 if ia > -1
-        ib = from_tables.indexOf tableB
-        from_tables.splice ib, 1 if ib > -1
+
+        if i is 0 # use first JOIN table in FROM clause
+          root_join_table = tableA
+        tmp = {} # find tables in FROM clause...
+        tmp[tableA] = from_tables.indexOf tableA
+        tmp[tableB] = from_tables.indexOf tableB
+        for table, pos of tmp # ...and remove them (unless they're the root table)
+          from_tables.splice pos, 1 if pos > -1 and table isnt root_join_table
+
         a = [tableA, columnA].join '.'
         b = [tableB, columnB].join '.'
         clause = "#{direction} JOIN #{target} ON #{a} = #{b}"
-        clause += " AND #{and_clause}" if and_clause?
         joins.push clause
       join_clause = joins.join ' '
 

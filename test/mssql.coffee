@@ -61,11 +61,22 @@ describe 'MSSQL', ->
     it 'should build query with JOIN', ->
       [query, params] = @mssql.build_query
         select:
-          table1: ['column1']
+          table2: ['column1']
         join: [
           ['@._id', 'table2.vehicle_id']
         ]
-      query.should.equal 'SELECT table1.column1,test.* FROM table1,test LEFT JOIN table2 ON test._id = table2.vehicle_id'
+      query.should.equal 'SELECT table2.column1,test.* FROM test LEFT JOIN table2 ON test._id = table2.vehicle_id'
+
+    it 'should build query with multiple JOIN on same table', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+          table2: ['column1']
+        join: [
+          ['@._id', 'table2.vehicle_id']
+          ['@.column1', 'table1.column1']
+        ]
+      query.should.equal 'SELECT table1.column1,table2.column1,test.* FROM test LEFT JOIN table2 ON test._id = table2.vehicle_id LEFT JOIN table1 ON test.column1 = table1.column1'
 
     it 'should build query with ORDER BY', ->
       [query, params] = @mssql.build_query
@@ -86,10 +97,11 @@ describe 'MSSQL', ->
         select:
           table1: ['column1']
         join: [
+          ['@.column1', 'table1.column1']
           ['table1._id', 'table2.vehicle_id']
         ]
         order_by: ['column1']
-      query.should.equal 'SELECT table1.column1,test.* FROM test,table1 LEFT JOIN table2 ON table1._id = table2.vehicle_id  ORDER BY column1'
+      query.should.equal 'SELECT table1.column1,test.* FROM test LEFT JOIN table1 ON test.column1 = table1.column1 LEFT JOIN table2 ON table1._id = table2.vehicle_id  ORDER BY column1'
 
     it 'should build query with WHERE', ->
       [query, params] = @mssql.build_query
@@ -135,6 +147,7 @@ describe 'MSSQL', ->
         select:
           table1: ['column1']
         join: [
+          ['@.column1', 'table1.column1']
           ['table1._id', 'table2.vehicle_id']
         ]
         where: [
@@ -142,7 +155,7 @@ describe 'MSSQL', ->
           ['table1.name', @mssql.contains 'fred']
         ]
         order_by: ['column1']
-      query.should.equal "SELECT table1.column1,test.* FROM test,table1 LEFT JOIN table2 ON table1._id = table2.vehicle_id WHERE [test].[_id] = @id0 AND [table1].[name] LIKE '%fred%' ORDER BY column1"
+      query.should.equal "SELECT table1.column1,test.* FROM test LEFT JOIN table1 ON test.column1 = table1.column1 LEFT JOIN table2 ON table1._id = table2.vehicle_id WHERE [test].[_id] = @id0 AND [table1].[name] LIKE '%fred%' ORDER BY column1"
       params.should.have.length 1
       params[0].value.should.equal 1234
 
