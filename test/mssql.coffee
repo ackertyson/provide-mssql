@@ -2,15 +2,21 @@ MSSQL = require '../src/mssql'
 
 describe 'MSSQL', ->
   before (done) ->
-    schema =
-      primary_key: '_id'
-      _id: 'Int'
-      date: 'Date'
-      name: 'VarChar'
-    table1_schema =
-      name: 'VarChar'
-    dummy = new MSSQL table1_schema, 'table1'
-    @mssql = new MSSQL schema, 'test'
+    class Model1
+      table:
+        name: 'test'
+        primary_key: '_id'
+        schema:
+          _id: 'Int'
+          date: 'Date'
+          name: 'VarChar'
+    class Model2
+      table:
+        name: 'table1'
+        schema:
+          name: 'VarChar'
+    dummy = new MSSQL Model2
+    @mssql = new MSSQL Model1
     done()
 
 
@@ -66,6 +72,15 @@ describe 'MSSQL', ->
           ['@._id', 'table2.vehicle_id']
         ]
       query.should.equal 'SELECT table2.column1,test.* FROM test LEFT JOIN table2 ON test._id = table2.vehicle_id'
+
+    it 'should honor provided JOIN direction', ->
+      [query, params] = @mssql.build_query
+        select:
+          table2: ['column1']
+        join: [
+          ['RIGHT', '@._id', 'table2.vehicle_id']
+        ]
+      query.should.equal 'SELECT table2.column1,test.* FROM test RIGHT JOIN table2 ON test._id = table2.vehicle_id'
 
     it 'should build query with multiple JOIN on same table', ->
       [query, params] = @mssql.build_query

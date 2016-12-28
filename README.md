@@ -14,12 +14,13 @@ Model (called from Express handler--for which consider [provide-handler](https:/
 model = require 'provide-mssql'
 
 class TicketModel
-  # whitelist of valid DB table columns and their datatypes...
-  @schema:
-    primary_key: '_id' # exclude PK from body of INSERT/UPDATE queries (see below)
-    _id: 'Int'
-    customer_id: 'VarChar'
-    received_date: 'Date'
+  table: # DB table definition
+    name: 'ticket' # table name in DB
+    primary_key: '_id'
+    schema: # whitelist of valid table columns (with datatypes) for queries
+      _id: 'Int'
+      customer_id: 'VarChar'
+      received_date: 'Date'
 
   all: (filters...) =>
     # JSON object will be built into SQL query...
@@ -42,8 +43,8 @@ class TicketModel
       ]
     yield @request params
 
-# set DB table name to 'ticket' for this model...
-module.exports = model.provide TicketModel, TicketModel.schema, 'ticket'
+
+module.exports = model.provide TicketModel
 ```
 
 Notice how we define a `primary_key` in the schema--this is to exclude that

@@ -3,8 +3,8 @@ Mangler = require './mangler'
 Model = require 'provide-model'
 
 class BaseModel extends MSSQL
-  constructor: (args...) ->
-    super args...
+  constructor: (Model, args...) ->
+    super Model, args...
     Promise::parallel = @promise_all_from_obj
 
 

@@ -9,7 +9,7 @@ class MSSQL
   @_cache: {} # static DB connection cache
   @_all_schema: {} # static SCHEMA store of all models
 
-  constructor: (@schema, @table_name, server, user_name, password, database) ->
+  constructor: (Model, server, user_name, password, database) ->
     server ?= process.env.SQL_SERVER
     user_name ?= process.env.SQL_USERNAME
     password ?= process.env.SQL_PASSWORD
@@ -26,9 +26,10 @@ class MSSQL
       min: 2
       max: 10
 
-    if @schema?.primary_key?
-      @primary_key = @schema.primary_key
-      delete @schema.primary_key
+    @schema = Model.prototype?.table?.schema
+    @primary_key = Model.prototype?.table?.primary_key
+    @table_name = Model.prototype?.table?.name
+    throw new Error "Please define a TABLE property on the model class with a NAME for your DB table" unless @table_name?
     @constructor._all_schema[@table_name] = @schema or {} # make SCHEMA available to other models
 
     # hash connection params to find/create cached connection
