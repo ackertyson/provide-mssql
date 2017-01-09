@@ -2,6 +2,7 @@
   "name": "provide-mssql",
   "version": "0.2.0",
   "description": "Convenience layer for MSSQL/Tedious DB in Express app",
+  "homepage": "http://providejs.com/",
   "repository": {
     "type": "git",
     "url": "git@github.com:ackertyson/provide-mssql.git"
@@ -17,7 +18,7 @@
   "license": "ISC",
   "dependencies": {
     "promise": "^7.1.1",
-    "provide-model": "^0.1.0",
+    "provide-model": "^0.1.1",
     "tedious": "^1.14.0",
     "tedious-connection-pool": "^1.0.5"
   },

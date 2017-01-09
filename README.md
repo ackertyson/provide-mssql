@@ -52,20 +52,67 @@ Notice how we define a `primary_key` in the schema--this is to exclude that
 column (`_id` in this example) from the fields affected by INSERT/UPDATE
 queries, as we don't actually want to change that value.
 
-A table name of `@` will be replaced with the model's `table.name` property
-('ticket' in the example above).
+Also note that model methods use "fat-arrow" to preserve context (so `this`
+refers to the local class).
+
+##Query Builder
+```
+select:
+  table1: ['columnA', 'columnD']
+  table2: ['columnA: othername', 'columnB', 'columnC']    
+
+...becomes....
+
+SELECT <base_table>.*, table1.columnA, table1.columnD, table2.columnA AS othername, table2.columnB, table2.columnC
+```
+
+A table name of `@` will be replaced with the model's `table.name` property (its
+"base table").
 
 An empty `select` object will default to `@.*` (all columns of model's base
 table). Likewise if `select` is defined but doesn't include the base table.
+Essentially, if you don't specify columns from the model base table, you're
+getting `@.*`.
 
 Defining a field as `COLUMN: ALIAS` will use the `AS` statement to assign an
 alias to that column.
 
+```
+join: [
+  ['@.other_id', 'othertable._id']
+  ['RIGHT', 'othertable.third_id', 'thirdtable._id']
+]
+
+(FROM <base_table>)
+LEFT JOIN othertable ON <base_table>.other_id = othertable._id
+RIGHT JOIN thirdtable ON othertable.third_id = thirdtable._id
+```
+
 You can pass a `JOIN` direction as an optional first array element in a join
 item; default is `LEFT`.
 
-Also note that model methods use "fat-arrow" to preserve context (so `this`
-refers to the local class).
+```
+where: [
+  ['@.some_id', model.eq 1234]
+  ['table2.first_name', model.contains 'sephina']
+]
+
+WHERE <base_table>.some_id = 1234
+AND table2.first_name LIKE '%sephina%'
+```
+
+```
+WHERE clause comparators:
+  contains: LIKE '%___%'
+  ends_with: LIKE '%___'
+  eq: =
+  gt: >
+  gte: >=
+  in: IN (<array>)
+  lt: <
+  lte: <=
+  starts_with: LIKE '___%'
+```
 
 See `test/mssql.coffee` for more query examples. If you run into a query that
 won't build properly, just pass it as a string (with optional params):
