@@ -2,21 +2,34 @@ MSSQL = require '../src/mssql'
 
 describe 'MSSQL', ->
   before (done) ->
-    class Model1
+    class TestModel
       table:
         name: 'test'
         primary_key: '_id'
         schema:
           _id: 'Int'
+          column1: 'VarChar'
           date: 'Date'
           name: 'VarChar'
-    class Model2
+    class Table1Model
       table:
         name: 'table1'
         schema:
+          column1: 'VarChar'
+          column2: 'VarChar'
+          column3: 'VarChar'
           name: 'VarChar'
-    dummy = new MSSQL Model2
-    @mssql = new MSSQL Model1
+    class Table2Model
+      table:
+        name: 'table2'
+        schema:
+          name: 'VarChar'
+          column1: 'VarChar'
+          column2: 'VarChar'
+          vehicle_id: 'Int'
+    dummy = new MSSQL Table1Model
+    dummy2 = new MSSQL Table2Model
+    @mssql = new MSSQL TestModel
     done()
 
 
@@ -39,6 +52,15 @@ describe 'MSSQL', ->
         select:
           '@': ['name', 'date']
       query.should.equal 'SELECT test.name,test.date FROM test'
+
+    it 'should throw if no valid SELECT fields', ->
+      try
+        [query, params] = @mssql.build_query
+          select:
+            '@': ['sname', 'datezzz']
+        expect(query).to.be.null
+      catch ex
+        ex.should.be.instanceOf Error
 
     it 'should add default SELECT on base table', ->
       [query, params] = @mssql.build_query
