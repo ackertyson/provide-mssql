@@ -3,7 +3,6 @@ tedious = require 'tedious'
 Request = tedious.Request
 TYPES = tedious.TYPES
 ConnectionPool = require 'tedious-connection-pool'
-Promise = require 'promise'
 
 class MSSQL
   @_cache: {} # static DB connection cache
@@ -160,9 +159,12 @@ class MSSQL
       table = @table_name if table is '@' # base table alias
       for column in columns
         [column, alias] = column.split ':'
-        select_clause += "#{separator}#{table}.#{column.trim()}"
-        select_clause += " AS #{alias.trim()}" if alias?
-        separator = ','
+        [alias, column, table] = [alias?.toString().trim(), column?.toString().trim(), table?.toString().trim()]
+        if @constructor._all_schema[table]?[column] or (@constructor._all_schema[table]? and column is '*')
+          select_clause += "#{separator}#{table}.#{column}"
+          select_clause += " AS #{alias}" if alias?
+          separator = ','
+    throw new Error "No valid tables/fields in SELECT clause" unless select_clause.length > 'SELECT '.length
 
     join_clause = ''
     if params.join?
