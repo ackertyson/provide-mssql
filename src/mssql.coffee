@@ -61,17 +61,6 @@ class MSSQL
   starts_with: (value) -> ['LIKE', "'#{@strip_bad_chars value}%'"]
 
 
-  build_filters: (query, raw_filters) ->
-    # DEPRECATED; just haven't replaced this last bit...
-    if filter.date_range? and filter.table? and filter.column? and whitelist[filter.table]?[filter.column]?
-      filters.date_range ?= []
-      comparator = if filter.direction is 'before' then '<=' else '>='
-      index = filters.date_range.length
-      # reformat MM-DD-YYYY date to ISO-8601 (YYYY-MM-DD)...
-      params.push @build_param 'date_'+filter.direction+index, 'Date', filter.value.replace /^([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})$/, '$3-$1-$2'
-      filters.date_range.push { query: " AND ["+filter.table+"].["+filter.column+"] #{comparator} @date_#{filter.direction}#{index}" }
-
-
   build_param: (name, type, value, options) ->
     { name: name, type: type, value: value, options: options }
 
@@ -312,6 +301,7 @@ class MSSQL
 
 
   strip_bad_chars: (value) -> # remove all non-alphanumeric except underscore, space and hyphen
+    return unless value?
     value.toString().replace /[^-_ a-zA-Z0-9]/g, ''
 
 

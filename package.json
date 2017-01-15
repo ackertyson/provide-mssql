@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git@github.com:ackertyson/provide-mssql.git"
   },
-  "main": "dist/index.min.js",
+  "main": "dist/index.js",
   "files": [
     "dist/"
   ],

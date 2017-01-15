@@ -272,6 +272,10 @@ describe 'MSSQL', ->
 
 
   describe 'strip_bad_chars', ->
+    it 'should return if no value', ->
+      value = @mssql.strip_bad_chars()
+      expect(value).to.be.undefined
+
     it 'should pass good string unaltered', ->
       value = @mssql.strip_bad_chars 'abra'
       value.should.equal 'abra'
