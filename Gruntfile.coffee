@@ -20,6 +20,8 @@ module.exports = (grunt) ->
 
     uglify:
       default:
+        options:
+          sourceMap: true
         files:
           'dist/index.min.js': ['dist/index.js']
 
