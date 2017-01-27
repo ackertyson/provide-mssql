@@ -32,6 +32,23 @@ describe 'MSSQL', ->
     @mssql = new MSSQL TestModel
     done()
 
+  describe '_cast_to_int', ->
+    it 'should turn false to zero', ->
+      value = @mssql._cast_to_int false
+      value.should.equal 0
+
+    it 'should turn undefined to zero', ->
+      value = @mssql._cast_to_int()
+      value.should.equal 0
+
+    it 'should turn junk to zero', ->
+      value = @mssql._cast_to_int 'string'
+      value.should.equal 0
+
+    it 'should turn true to 1', ->
+      value = @mssql._cast_to_int true
+      value.should.equal 1
+
 
   describe 'contains', ->
     it 'should clean up bad inputs', ->
