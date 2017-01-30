@@ -228,9 +228,10 @@ class MSSQL
     [query.trim(), sql_params]
 
 
-  _coerce_tinyint: (bool) ->
-    return null unless @typeof bool, 'boolean'
-    return if bool is true then 1 else 0
+  _coerce_int: (value) ->
+    return value if @typeof value, 'number'
+    return null unless @typeof value, 'boolean'
+    return if value is true then 1 else 0
 
 
   error_msg: (err, query, params) ->
@@ -259,7 +260,7 @@ class MSSQL
     throw new Error "MSSQL: #{@table_name} model: no schema definition found for #{column}" unless type?
     safe_column = column.replace /[^a-zA-Z0-9]/g, '' # strip all non-alphanumeric characters
     safe_column = safe_column + tag.toString() if tag.toString().length > 0
-    value = @_coerce_tinyint value if type.toLowerCase() is 'tinyint'
+    value = @_coerce_int value if type.toLowerCase() is 'tinyint'
     sql_param = @build_param safe_column, type, value
     [safe_column, sql_param]
 

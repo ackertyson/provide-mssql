@@ -32,21 +32,21 @@ describe 'MSSQL', ->
     @mssql = new MSSQL TestModel
     done()
 
-  describe '_coerce_tinyint', ->
+  describe '_coerce_int', ->
     it 'should turn false to zero', ->
-      value = @mssql._coerce_tinyint false
+      value = @mssql._coerce_int false
       value.should.equal 0
 
     it 'should turn undefined to null', ->
-      value = @mssql._coerce_tinyint()
+      value = @mssql._coerce_int()
       expect(value).to.be.null
 
     it 'should turn junk to null', ->
-      value = @mssql._coerce_tinyint 'string'
+      value = @mssql._coerce_int 'string'
       expect(value).to.be.null
 
     it 'should turn true to 1', ->
-      value = @mssql._coerce_tinyint true
+      value = @mssql._coerce_int true
       value.should.equal 1
 
 
