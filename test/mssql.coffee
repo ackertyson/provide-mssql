@@ -50,6 +50,20 @@ describe 'MSSQL', ->
       value.should.equal 1
 
 
+  describe '_coerce_time', ->
+    it 'should return ISO string unchanged', ->
+      value = @mssql._coerce_time "2017-01-30T19:33:53.779Z"
+      value.should.equal "2017-01-30T19:33:53.779Z"
+
+    it 'should convert HH:MM to ISO string', ->
+      value = @mssql._coerce_time "19:33"
+      expect(/T19:33/.test value).to.equal true
+
+    it 'should return undefined on empty input', ->
+      value = @mssql._coerce_time()
+      expect(value).to.equal undefined
+
+
   describe 'contains', ->
     it 'should clean up bad inputs', ->
       value = @mssql.contains 'bad\\,stuff'

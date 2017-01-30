@@ -38,12 +38,8 @@ class MSSQL
     @constructor._cache[dbconn] ?= new ConnectionPool pool_config, config
     @pool = @constructor._cache[dbconn]
 
-    _pad = (number) ->
-      number = number.toString()
-      return number unless number.length is 1
-      return '0' + number
     Date::to_mssql_string = () ->
-      @getUTCFullYear()+'-'+_pad(@getUTCMonth()+1)+'-'+_pad(@getUTCDate())+' '+_pad(@getUTCHours())+':'+_pad(@getUTCMinutes())+':'+_pad(@getUTCSeconds())
+      @getUTCFullYear()+'-'+@_pad(@getUTCMonth()+1)+'-'+@_pad(@getUTCDate())+' '+@_pad(@getUTCHours())+':'+@_pad(@getUTCMinutes())+':'+@_pad(@getUTCSeconds())
 
 
   # WHERE clause operators
@@ -234,14 +230,26 @@ class MSSQL
     return if value is true then 1 else 0
 
 
-  error_msg: (err, query, params) ->
+  _coerce_time: (value) ->
+    return unless value?
+    return value if /T[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}/.test value # already ISO datetime
+    # ...otherwise build/return ISO string...
+    d = new Date
+    parse = value.split ':'
+    d.setUTCHours(parse[0], parse[1]) if parse.length > 1
+    d.toISOString()
+
+
+  error_msg: (err, query, params...) ->
     ps = ''
-    for k, v of params
-      ps += "[#{k}: #{v}] "
+    for param in params
+      for k, v of param
+        ps += "[#{k}: #{v}] "
+      ps += "\n"
     return """\n#{new Date()}
       ERROR : #{err.message}
       QUERY : #{query}
-      PARAMS: #{ps}"""
+      PARAMS:\n#{ps}"""
 
 
   mssql_date_string: (date) ->
@@ -249,6 +257,12 @@ class MSSQL
     if @typeof date, 'string'
       date = new Date(date)
     date.to_mssql_string()
+
+
+  _pad: (number) ->
+    number = number.toString()
+    return number unless number.length is 1
+    return '0' + number
 
 
   parameterize: (table, column, value, tag='') ->
@@ -261,6 +275,7 @@ class MSSQL
     safe_column = column.replace /[^a-zA-Z0-9]/g, '' # strip all non-alphanumeric characters
     safe_column = safe_column + tag.toString() if tag.toString().length > 0
     value = @_coerce_int value if type.toLowerCase() is 'tinyint'
+    value = @_coerce_time value if type.toLowerCase() is 'time'
     sql_param = @build_param safe_column, type, value
     [safe_column, sql_param]
 
