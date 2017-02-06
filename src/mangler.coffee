@@ -1,9 +1,10 @@
 class Mangler
   # convenient combination of DB resultsets (arrays of objects)
 
-  constructor: (@parasite, @parasite_key) -> @
+  constructor: (@parasite, @parasite_key, @as_collection=false) -> @
 
   as: (@as_key) =>
+    return @_attach_collection_by_key @host, @host_key, @parasite, @parasite_key, @as_key, @include_keys if @as_collection
     @_attach_by_key @host, @host_key, @parasite, @parasite_key, @as_key, @include_keys
 
   pick: (@include_keys...) => @
@@ -28,7 +29,9 @@ class Mangler
     host
 
   _attach_collection_by_key: (host, host_key, parasite, parasite_key, attach_as_key, include_keys=[]) ->
-    # collect attached items in array(s)
+    # same as above but attach items as an array
+    throw new Error "attach_collection_by_key: no HOST collection" unless host?
+    throw new Error "attach_collection_by_key: no PARASITE collection" unless parasite?
     p = new Map
     parasite.forEach (item) ->
       p.set item[parasite_key], [] unless p.has item[parasite_key]

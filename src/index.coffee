@@ -25,6 +25,8 @@ class BaseModel extends MSSQL
   attach: (collection, key) ->
     new Mangler collection, key
 
+  attach_collection: (collection, key) ->
+    new Mangler collection, key, true
 
   list_of_key: (data, extract_columns...) ->
     # return array of specified column(s) from provided resultset (which is an array of objects)
