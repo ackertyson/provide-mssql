@@ -271,12 +271,14 @@ class MSSQL
     else # check other model schema
       type = @constructor._all_schema[table]?[column]
       column = "#{table}.#{column}"
+    options = {}
+    { type, options } = ({ type: k, options: v} for k,v of type)[0] if @typeof(type, 'object')
     throw new Error "MSSQL: #{@table_name} model: no schema definition found for #{column}" unless type?
     safe_column = column.replace /[^a-zA-Z0-9]/g, '' # strip all non-alphanumeric characters
     safe_column = safe_column + tag.toString() if tag.toString().length > 0
     value = @_coerce_int value if type.toLowerCase() is 'tinyint'
     value = @_coerce_time value if type.toLowerCase() is 'time'
-    sql_param = @build_param safe_column, type, value
+    sql_param = @build_param safe_column, type, value, options
     [safe_column, sql_param]
 
 

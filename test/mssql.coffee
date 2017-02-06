@@ -11,6 +11,7 @@ describe 'MSSQL', ->
           column1: 'VarChar'
           date: 'Date'
           name: 'VarChar'
+          hours: 'Decimal': precision: 4, scale: 2
     class Table1Model
       table:
         name: 'table1'
@@ -300,6 +301,29 @@ describe 'MSSQL', ->
       query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id0"
       params.should.have.length 1
       params[0].value.should.equal 1234
+
+
+  describe 'parameterize', ->
+    it 'should handle OPTIONS', ->
+      [column, param] = @mssql.parameterize 'test', 'hours', 11.5
+      param.should.have.property 'name'
+      param.name.should.equal 'hours'
+      param.should.have.property 'type'
+      param.type.should.equal 'Decimal'
+      param.should.have.property 'value'
+      param.value.should.equal 11.5
+      param.should.have.property 'options'
+      param.options.should.have.property 'precision', 4
+      param.options.should.have.property 'scale', 2
+
+    it 'should handle no OPTIONS', ->
+      [column, param] = @mssql.parameterize 'test', 'column1', 'nice'
+      param.should.have.property 'name'
+      param.name.should.equal 'column1'
+      param.should.have.property 'type'
+      param.type.should.equal 'VarChar'
+      param.should.have.property 'value'
+      param.value.should.equal 'nice'
 
 
   describe 'strip_bad_chars', ->

@@ -21,6 +21,7 @@ class TicketModel
       _id: 'Int'
       customer_id: 'VarChar'
       received_date: 'Date'
+      hours: 'Decimal': precision: 4, scale: 2 # specify additional param options
 
   # and now the model methods....
   all: (filters...) =>
