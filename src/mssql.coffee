@@ -52,6 +52,8 @@ class MSSQL
     values = [values] unless Array.isArray values
     safe_values = (@strip_bad_chars value for value in values)
     ['IN', "(#{safe_values.join ','})"]
+  is_not_null: -> ['IS NOT NULL']
+  is_null: -> ['IS NULL']
   lt: (value) -> ['<', value]
   lte: (value) -> ['<=', value]
   starts_with: (value) -> ['LIKE', "'#{@strip_bad_chars value}%'"]
@@ -194,7 +196,9 @@ class MSSQL
         [table, column] = table_column.split '.'
         table = @table_name if table is '@'
         [comparator, value] = criterion
-        if comparator.toUpperCase() in ['IN', 'LIKE'] # don't use parameters
+        if !value? # IS [NOT] NULL
+          where_clause += "#{oper} [#{table}].[#{column}] #{comparator}"
+        else if comparator.toUpperCase() in ['IN', 'LIKE'] # don't use parameters
           where_clause += "#{oper} [#{table}].[#{column}] #{comparator} #{value}"
         else
           [safe_column, sql_param] = @parameterize table, column, value, i
