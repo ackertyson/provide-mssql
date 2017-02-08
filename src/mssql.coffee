@@ -8,18 +8,18 @@ class MSSQL
   @_cache: {} # static DB connection cache
   @_all_schema: {} # static SCHEMA store of all models
 
-  constructor: (Model, server, user_name, password, database) ->
+  constructor: (Model, server, user_name, password, @database) ->
     server ?= process.env.SQL_SERVER
     user_name ?= process.env.SQL_USERNAME
     password ?= process.env.SQL_PASSWORD
-    database ?= process.env.SQL_DATABASE
+    @database ?= process.env.SQL_DATABASE
     config =
       server: server
       userName: user_name
       password: password
       options:
         encrypt: true
-        database: database
+        database: @database
         useUTC: true
     pool_config =
       min: 2
@@ -29,11 +29,12 @@ class MSSQL
     @primary_key = Model.prototype?.table?.primary_key
     @table_name = Model.prototype?.table?.name
     throw new Error "Please define a TABLE property on the model class with a NAME for your DB table" unless @table_name?
-    @constructor._all_schema[@table_name] = @schema or {} # make SCHEMA available to other models
+    @constructor._all_schema[@database] ?= {}
+    @constructor._all_schema[@database][@table_name] = @schema or {} # make SCHEMA available to other models
 
     # hash connection params to find/create cached connection
     hash = crypto.createHash 'sha256'
-    hash.update "#{server}#{user_name}#{password}#{database}"
+    hash.update "#{server}#{user_name}#{password}#{@database}"
     dbconn = hash.digest 'hex'
     @constructor._cache[dbconn] ?= new ConnectionPool pool_config, config
     @pool = @constructor._cache[dbconn]
@@ -147,7 +148,7 @@ class MSSQL
       for column in columns
         [column, alias] = column.split ':'
         [alias, column, table] = [alias?.toString().trim(), column?.toString().trim(), table?.toString().trim()]
-        if @constructor._all_schema[table]?[column] or (@constructor._all_schema[table]? and column is '*')
+        if @constructor._all_schema[@database][table]?[column] or (@constructor._all_schema[@database][table]? and column is '*')
           select_clause += "#{separator}#{table}.#{column}"
           select_clause += " AS #{alias}" if alias?
           separator = ','
@@ -273,7 +274,7 @@ class MSSQL
     if table is @table_name # use this model's schema
       type = @schema[column] if @schema?
     else # check other model schema
-      type = @constructor._all_schema[table]?[column]
+      type = @constructor._all_schema[@database][table]?[column]
       column = "#{table}.#{column}"
     options = {}
     { type, options } = ({ type: k, options: v} for k,v of type)[0] if @typeof(type, 'object')
