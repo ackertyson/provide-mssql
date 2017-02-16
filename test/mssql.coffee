@@ -211,6 +211,42 @@ describe 'MSSQL', ->
       params.should.have.length 2
       params[0].value.should.equal 1234
 
+    it 'should build query which specifies WHERE and/or', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.eq 1234]
+          ['OR', 'table1.name', @mssql.lt 'fred']
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 OR [table1].[name] < @table1name1"
+      params.should.have.length 2
+      params[0].value.should.equal 1234
+
+    it 'should ignore initial WHERE and/or', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['AND', '@._id', @mssql.eq 1234]
+          ['OR', 'table1.name', @mssql.lt 'fred']
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 OR [table1].[name] < @table1name1"
+      params.should.have.length 2
+      params[0].value.should.equal 1234
+
+    it 'should ignore random WHERE and/or', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.eq 1234]
+          ['ZAZZ', 'table1.name', @mssql.lt 'fred']
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 AND [table1].[name] < @table1name1"
+      params.should.have.length 2
+      params[0].value.should.equal 1234
+
     it 'should build query with JOIN, WHERE and ORDER BY', ->
       [query, params] = @mssql.build_query
         select:

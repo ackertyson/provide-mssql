@@ -194,18 +194,26 @@ class MSSQL
       oper = 'WHERE'
       for set, i in params.where
         [table_column, criterion] = set
+        if set.length is 3 # optional AND/OR keyword provided
+          if oper is 'WHERE' # ...but ignore it if this is first condition
+            [_ignore, table_column, criterion] = set
+          else
+            [oper, table_column, criterion] = set
+            oper = oper.toString().trim().toUpperCase()
+            oper = 'AND' unless oper in ['AND', 'OR']
         [table, column] = table_column.split '.'
         table = @table_name if table is '@'
         [comparator, value] = criterion
         if !value? # IS [NOT] NULL
-          where_clause += "#{oper} [#{table}].[#{column}] #{comparator}"
+          where_clause += " #{oper} [#{table}].[#{column}] #{comparator}"
         else if comparator.toUpperCase() in ['IN', 'LIKE'] # don't use parameters
-          where_clause += "#{oper} [#{table}].[#{column}] #{comparator} #{value}"
+          where_clause += " #{oper} [#{table}].[#{column}] #{comparator} #{value}"
         else
           [safe_column, sql_param] = @parameterize table, column, value, i
-          where_clause += "#{oper} [#{table}].[#{column}] #{comparator} @#{safe_column}"
+          where_clause += " #{oper} [#{table}].[#{column}] #{comparator} @#{safe_column}"
           sql_params.push sql_param
-        oper = ' AND'
+        where_clause = where_clause.trim()
+        oper = 'AND'
 
     order_by_clause = ''
     if params.order_by?
