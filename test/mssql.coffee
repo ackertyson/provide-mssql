@@ -176,6 +176,28 @@ describe 'MSSQL', ->
       params.should.have.length 1
       params[0].value.should.equal 1234
 
+    it 'should build query with WHERE...IN', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.in [1,2,3,4]]
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] IN (@id00,@id01,@id02,@id03)"
+      params.should.have.length 4
+      params[1].value.should.equal 2
+
+    it 'should build query with WHERE...LIKE', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.starts_with 'bea']
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] LIKE @id00"
+      params.should.have.length 1
+      params[0].value.should.equal 'bea%'
+
     it 'should ignore empty WHERE', ->
       [query, params] = @mssql.build_query
         select:

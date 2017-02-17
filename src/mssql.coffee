@@ -118,9 +118,9 @@ class MSSQL
       [table, column] = table_column.split '.'
       [comparator, value] = criterion
       column = table unless column? # drop table name if any provided (UPDATE can only be run on model's base table)
-      [param_name, sql_param] = @parameterize @table_name, column, value, i
+      [param_name, parameters] = @parameterize @table_name, column, value, i
       where_clause += "#{oper} [#{column}] #{comparator} #{param_name}"
-      sql_params.push sql_param
+      Array::push.apply sql_params, parameters
       oper = ' AND'
 
     query = "UPDATE [#{@table_name}] SET #{updates} OUTPUT INSERTED.* #{where_clause}"
@@ -290,7 +290,7 @@ class MSSQL
     param_base = param_base + tag.toString() if tag.toString().length > 0
     parameters = []
     param_name = ''
-    value = [value] unless @typeof value, 'array' # cast as Array
+    value = [value] unless @typeof value, 'array' # simplify BETWEEN and IN logic by processing as array
     for v, i in value
       v = @_coerce_int v if type.toLowerCase() is 'tinyint'
       v = @_coerce_time v if type.toLowerCase() is 'time'
