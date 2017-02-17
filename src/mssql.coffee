@@ -50,7 +50,7 @@ class MSSQL
   gt: (value) -> ['>', value]
   gte: (value) -> ['>=', value]
   in: (values) ->
-    values = [values] unless Array.isArray values
+    values = [values] unless @typeof values, 'array'
     ['IN', values]
   is_not_null: -> ['IS NOT NULL']
   is_null: -> ['IS NULL']

@@ -187,6 +187,17 @@ describe 'MSSQL', ->
       params.should.have.length 4
       params[1].value.should.equal 2
 
+    it 'should build query with nonarray WHERE...IN', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.in 3]
+        ]
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] IN (@id00)"
+      params.should.have.length 1
+      params[0].value.should.equal 3
+
     it 'should build query with WHERE...LIKE', ->
       [query, params] = @mssql.build_query
         select:
