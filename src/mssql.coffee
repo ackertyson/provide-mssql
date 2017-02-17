@@ -44,20 +44,19 @@ class MSSQL
 
 
   # WHERE clause operators
-  contains: (value) -> ['LIKE', "'%#{@strip_bad_chars value}%'"]
-  ends_with: (value) -> ['LIKE', "'%#{@strip_bad_chars value}'"]
+  contains: (value) -> ['LIKE', "%#{value}%"]
+  ends_with: (value) -> ['LIKE', "%#{value}"]
   eq: (value) -> ['=', value]
   gt: (value) -> ['>', value]
   gte: (value) -> ['>=', value]
   in: (values) ->
     values = [values] unless Array.isArray values
-    safe_values = (@strip_bad_chars value for value in values)
-    ['IN', "(#{safe_values.join ','})"]
+    ['IN', values]
   is_not_null: -> ['IS NOT NULL']
   is_null: -> ['IS NULL']
   lt: (value) -> ['<', value]
   lte: (value) -> ['<=', value]
-  starts_with: (value) -> ['LIKE', "'#{@strip_bad_chars value}%'"]
+  starts_with: (value) -> ['LIKE', "#{value}%"]
 
 
   build_param: (name, type, value, options) ->
@@ -75,9 +74,9 @@ class MSSQL
       [table, column] = table_column.split '.'
       [comparator, value] = criterion
       column = table unless column? # drop table name if any provided (DELETE can only be run on model's base table)
-      [safe_column, sql_param] = @parameterize @table_name, column, value, i
-      where_clause += "#{oper} [#{column}] #{comparator} @#{safe_column}"
-      sql_params.push sql_param
+      [param_name, parameters] = @parameterize @table_name, column, value, i
+      where_clause += "#{oper} [#{column}] #{comparator} #{param_name}"
+      Array::push.apply sql_params, parameters
       oper = ' AND'
 
     query = "DELETE FROM [#{@table_name}] OUTPUT DELETED.* #{where_clause}"
@@ -94,9 +93,9 @@ class MSSQL
       p_names = []
       for own column, value of body
         columns.push "[#{column}]"
-        [safe_column, sql_param] = @parameterize @table_name, column, value, i
-        sql_params.push sql_param
-        p_names.push "@#{safe_column}"
+        [param_name, parameters] = @parameterize @table_name, column, value, i
+        Array::push.apply sql_params, parameters
+        p_names.push "#{param_name}"
       items.push "(#{p_names.join ','})"
     query = "INSERT INTO [#{@table_name}] (#{columns.join ','}) OUTPUT INSERTED.* VALUES #{items.join ','}"
     [query.trim(), sql_params]
@@ -108,9 +107,9 @@ class MSSQL
     updates = []
     sql_params = []
     for own column, value of body
-      [safe_column, sql_param] = @parameterize @table_name, column, value
-      updates.push "[#{column}]=@#{safe_column}"
-      sql_params.push sql_param
+      [param_name, parameters] = @parameterize @table_name, column, value
+      updates.push "[#{column}]=#{param_name}"
+      Array::push.apply sql_params, parameters
 
     where_clause = ''
     oper = 'WHERE'
@@ -119,8 +118,8 @@ class MSSQL
       [table, column] = table_column.split '.'
       [comparator, value] = criterion
       column = table unless column? # drop table name if any provided (UPDATE can only be run on model's base table)
-      [safe_column, sql_param] = @parameterize @table_name, column, value, i
-      where_clause += "#{oper} [#{column}] #{comparator} @#{safe_column}"
+      [param_name, sql_param] = @parameterize @table_name, column, value, i
+      where_clause += "#{oper} [#{column}] #{comparator} #{param_name}"
       sql_params.push sql_param
       oper = ' AND'
 
@@ -206,12 +205,11 @@ class MSSQL
         [comparator, value] = criterion
         if !value? # IS [NOT] NULL
           where_clause += " #{oper} [#{table}].[#{column}] #{comparator}"
-        else if comparator.toUpperCase() in ['IN', 'LIKE'] # don't use parameters
-          where_clause += " #{oper} [#{table}].[#{column}] #{comparator} #{value}"
         else
-          [safe_column, sql_param] = @parameterize table, column, value, i
-          where_clause += " #{oper} [#{table}].[#{column}] #{comparator} @#{safe_column}"
-          sql_params.push sql_param
+          [param_name, parameters] = @parameterize table, column, value, i
+          param_name = "(#{param_name})" if comparator is 'IN'
+          where_clause += " #{oper} [#{table}].[#{column}] #{comparator} #{param_name}"
+          Array::push.apply sql_params, parameters
         where_clause = where_clause.trim()
         oper = 'AND'
 
@@ -285,14 +283,21 @@ class MSSQL
       type = @constructor._all_schema[@database][table]?[column]
       column = "#{table}.#{column}"
     options = {}
+    # additional options passed as object...
     { type, options } = ({ type: k, options: v} for k,v of type)[0] if @typeof(type, 'object')
     throw new Error "MSSQL: #{@table_name} model: no schema definition found for #{column}" unless type?
-    safe_column = column.replace /[^a-zA-Z0-9]/g, '' # strip all non-alphanumeric characters
-    safe_column = safe_column + tag.toString() if tag.toString().length > 0
-    value = @_coerce_int value if type.toLowerCase() is 'tinyint'
-    value = @_coerce_time value if type.toLowerCase() is 'time'
-    sql_param = @build_param safe_column, type, value, options
-    [safe_column, sql_param]
+    param_base = column.replace /[^a-zA-Z0-9]/g, '' # strip all non-alphanumeric characters
+    param_base = param_base + tag.toString() if tag.toString().length > 0
+    parameters = []
+    param_name = ''
+    value = [value] unless @typeof value, 'array' # cast as Array
+    for v, i in value
+      v = @_coerce_int v if type.toLowerCase() is 'tinyint'
+      v = @_coerce_time v if type.toLowerCase() is 'time'
+      param_name += "@#{param_base}#{i},"
+      parameters.push @build_param "#{param_base}#{i}", type, v, options
+    param_name = param_name.slice 0, -1 # remove trailing comma
+    [param_name, parameters]
 
 
   request: (query, params...) =>
@@ -335,11 +340,6 @@ class MSSQL
     for own column, value of body # leave PRIMARY_KEY (if defined) out of sanitized body
       sanitized[column] = value if @schema[column]? and not (@primary_key? and column is @primary_key)
     sanitized
-
-
-  strip_bad_chars: (value) -> # remove all non-alphanumeric except underscore, space and hyphen
-    return unless value?
-    value.toString().replace /[^-_ a-zA-Z0-9]/g, ''
 
 
   typeof: (subject, type) ->

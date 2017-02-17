@@ -65,13 +65,6 @@ describe 'MSSQL', ->
       expect(value).to.equal undefined
 
 
-  describe 'contains', ->
-    it 'should clean up bad inputs', ->
-      value = @mssql.contains 'bad\\,stuff'
-      value.should.have.length 2
-      value[1].should.equal "\'%badstuff%\'"
-
-
   describe 'build_query', ->
     it 'should build simple query', ->
       [query, params] = @mssql.build_query
@@ -179,7 +172,7 @@ describe 'MSSQL', ->
         where: [
           ['@._id', @mssql.eq 1234]
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0"
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00"
       params.should.have.length 1
       params[0].value.should.equal 1234
 
@@ -207,7 +200,7 @@ describe 'MSSQL', ->
           ['@._id', @mssql.eq 1234]
           ['table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 AND [table1].[name] < @table1name1"
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 AND [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -219,7 +212,7 @@ describe 'MSSQL', ->
           ['@._id', @mssql.eq 1234]
           ['OR', 'table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 OR [table1].[name] < @table1name1"
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 OR [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -231,7 +224,7 @@ describe 'MSSQL', ->
           ['AND', '@._id', @mssql.eq 1234]
           ['OR', 'table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 OR [table1].[name] < @table1name1"
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 OR [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -243,7 +236,7 @@ describe 'MSSQL', ->
           ['@._id', @mssql.eq 1234]
           ['ZAZZ', 'table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id0 AND [table1].[name] < @table1name1"
+      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 AND [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -260,8 +253,8 @@ describe 'MSSQL', ->
           ['table1.name', @mssql.contains 'fred']
         ]
         order_by: ['column1']
-      query.should.equal "SELECT table1.column1,test.* FROM test LEFT JOIN table1 ON test.column1 = table1.column1 LEFT JOIN table2 ON table1._id = table2.vehicle_id WHERE [test].[_id] = @id0 AND [table1].[name] LIKE '%fred%' ORDER BY column1"
-      params.should.have.length 1
+      query.should.equal "SELECT table1.column1,test.* FROM test LEFT JOIN table1 ON test.column1 = table1.column1 LEFT JOIN table2 ON table1._id = table2.vehicle_id WHERE [test].[_id] = @id00 AND [table1].[name] LIKE @table1name10 ORDER BY column1"
+      params.should.have.length 2
       params[0].value.should.equal 1234
 
     it 'should build INSERT query', ->
@@ -270,7 +263,7 @@ describe 'MSSQL', ->
           name: 'new name'
           date: '2016-12-01'
           junk: 'ignore this'
-      query.should.equal "INSERT INTO [test] ([name],[date]) OUTPUT INSERTED.* VALUES (@name0,@date0)"
+      query.should.equal "INSERT INTO [test] ([name],[date]) OUTPUT INSERTED.* VALUES (@name00,@date00)"
       params.should.have.length 2
       params[0].value.should.equal 'new name'
       params[0].should.not.have.property 'junk'
@@ -288,7 +281,7 @@ describe 'MSSQL', ->
             junk: 'ignore this'
           }
         ]
-      query.should.equal "INSERT INTO [test] ([name],[date]) OUTPUT INSERTED.* VALUES (@name0,@date0),(@name1,@date1)"
+      query.should.equal "INSERT INTO [test] ([name],[date]) OUTPUT INSERTED.* VALUES (@name00,@date00),(@name10,@date10)"
       params.should.have.length 4
       params[2].value.should.equal 'new name2'
       params[2].should.not.have.property 'junk'
@@ -302,7 +295,7 @@ describe 'MSSQL', ->
         where: [
           ['@._id', @mssql.eq 1234]
         ]
-      query.should.equal "UPDATE [test] SET [name]=@name,[date]=@date OUTPUT INSERTED.* WHERE [_id] = @id0"
+      query.should.equal "UPDATE [test] SET [name]=@name0,[date]=@date0 OUTPUT INSERTED.* WHERE [_id] = @id00"
       params.should.have.length 3
       params[0].value.should.equal 'new name'
 
@@ -314,7 +307,7 @@ describe 'MSSQL', ->
         where: [
           ['table_name._id', @mssql.eq 1234]
         ]
-      query.should.equal "UPDATE [test] SET [name]=@name,[date]=@date OUTPUT INSERTED.* WHERE [_id] = @id0"
+      query.should.equal "UPDATE [test] SET [name]=@name0,[date]=@date0 OUTPUT INSERTED.* WHERE [_id] = @id00"
       params.should.have.length 3
       params[0].value.should.equal 'new name'
 
@@ -324,7 +317,7 @@ describe 'MSSQL', ->
         where: [
           ['@._id', @mssql.eq 1234]
         ]
-      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id0"
+      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id00"
       params.should.have.length 1
       params[0].value.should.equal 1234
 
@@ -334,55 +327,31 @@ describe 'MSSQL', ->
         where: [
           ['table_name._id', @mssql.eq 1234]
         ]
-      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id0"
+      query.should.equal "DELETE FROM [test] OUTPUT DELETED.* WHERE [_id] = @id00"
       params.should.have.length 1
       params[0].value.should.equal 1234
 
 
   describe 'parameterize', ->
     it 'should handle OPTIONS', ->
-      [column, param] = @mssql.parameterize 'test', 'hours', 11.5
-      param.should.have.property 'name'
-      param.name.should.equal 'hours'
-      param.should.have.property 'type'
-      param.type.should.equal 'Decimal'
-      param.should.have.property 'value'
-      param.value.should.equal 11.5
-      param.should.have.property 'options'
-      param.options.should.have.property 'precision', 4
-      param.options.should.have.property 'scale', 2
+      [column, params] = @mssql.parameterize 'test', 'hours', 11.5
+      params.should.have.length 1
+      params[0].should.have.property 'name'
+      params[0].name.should.equal 'hours0'
+      params[0].should.have.property 'type'
+      params[0].type.should.equal 'Decimal'
+      params[0].should.have.property 'value'
+      params[0].value.should.equal 11.5
+      params[0].should.have.property 'options'
+      params[0].options.should.have.property 'precision', 4
+      params[0].options.should.have.property 'scale', 2
 
     it 'should handle no OPTIONS', ->
-      [column, param] = @mssql.parameterize 'test', 'column1', 'nice'
-      param.should.have.property 'name'
-      param.name.should.equal 'column1'
-      param.should.have.property 'type'
-      param.type.should.equal 'VarChar'
-      param.should.have.property 'value'
-      param.value.should.equal 'nice'
-
-
-  describe 'strip_bad_chars', ->
-    it 'should return if no value', ->
-      value = @mssql.strip_bad_chars()
-      expect(value).to.be.undefined
-
-    it 'should pass good string unaltered', ->
-      value = @mssql.strip_bad_chars 'abra'
-      value.should.equal 'abra'
-
-    it 'should strip simple symbols', ->
-      value = @mssql.strip_bad_chars 'ab+ra'
-      value.should.equal 'abra'
-
-    it 'should strip slashes and single-quote', ->
-      value = @mssql.strip_bad_chars "ab'r\a"
-      value.should.equal 'abra'
-
-    it 'should strip backslashes and double-quote', ->
-      value = @mssql.strip_bad_chars '\/ab\\"ra/'
-      value.should.equal 'abra'
-
-    it 'should handle being passed a RegExp', ->
-      value = @mssql.strip_bad_chars /ab\\"ra/
-      value.should.equal 'abra'
+      [column, params] = @mssql.parameterize 'test', 'column1', 'nice'
+      params.should.have.length 1
+      params[0].should.have.property 'name'
+      params[0].name.should.equal 'column10'
+      params[0].should.have.property 'type'
+      params[0].type.should.equal 'VarChar'
+      params[0].should.have.property 'value'
+      params[0].value.should.equal 'nice'
