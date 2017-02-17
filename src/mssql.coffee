@@ -76,6 +76,7 @@ class MSSQL
       [comparator, value] = criterion
       column = table unless column? # drop table name if any provided (DELETE can only be run on model's base table)
       [param_name, parameters] = @parameterize @table_name, column, value, i
+      param_name = "(#{param_name})" if comparator is 'IN'
       where_clause += "#{oper} [#{column}] #{comparator} #{param_name}"
       Array::push.apply sql_params, parameters
       oper = ' AND'
@@ -120,6 +121,7 @@ class MSSQL
       [comparator, value] = criterion
       column = table unless column? # drop table name if any provided (UPDATE can only be run on model's base table)
       [param_name, parameters] = @parameterize @table_name, column, value, i
+      param_name = "(#{param_name})" if comparator is 'IN'
       where_clause += "#{oper} [#{column}] #{comparator} #{param_name}"
       Array::push.apply sql_params, parameters
       oper = ' AND'
