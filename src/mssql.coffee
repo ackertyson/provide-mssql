@@ -56,6 +56,7 @@ class MSSQL
   is_null: -> ['IS NULL']
   lt: (value) -> ['<', value]
   lte: (value) -> ['<=', value]
+  neq: (value) -> ['<>', value]
   starts_with: (value) -> ['LIKE', "#{value}%"]
 
 

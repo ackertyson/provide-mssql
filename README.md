@@ -103,6 +103,19 @@ AND table2.first_name LIKE '%sephina%'
 ```
 
 ```
+where: [
+  ['@.some_id', model.eq 1234]
+  ['OR', 'table2.first_name', model.contains 'sephina']
+]
+
+WHERE <base_table>.some_id = 1234
+OR table2.first_name LIKE '%sephina%'
+```
+
+You can pass 'OR' as an optional first array element in a where subclause;
+default is `AND`.
+
+```
 WHERE clause comparators:
   contains: LIKE '%___%'
   ends_with: LIKE '%___'
@@ -110,8 +123,11 @@ WHERE clause comparators:
   gt: >
   gte: >=
   in: IN (<array>)
+  is_not_null: IS NOT NULL
+  is_null: IS NULL
   lt: <
   lte: <=
+  neq: <>
   starts_with: LIKE '___%'
 ```
 
