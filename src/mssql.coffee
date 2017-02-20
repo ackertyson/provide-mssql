@@ -151,7 +151,8 @@ class MSSQL
         [column, alias] = column.split ':'
         [alias, column, table] = [alias?.toString().trim(), column?.toString().trim(), table?.toString().trim()]
         if @constructor._all_schema[@database][table]?[column] or (@constructor._all_schema[@database][table]? and column is '*')
-          select_clause += "#{separator}#{table}.#{column}"
+          column = "[#{column}]" unless column is '*'
+          select_clause += "#{separator}[#{table}].#{column}"
           select_clause += " AS #{alias}" if alias?
           separator = ','
     throw new Error "No valid tables/fields in SELECT clause" unless select_clause.length > 'SELECT '.length
@@ -177,9 +178,9 @@ class MSSQL
         for table, pos of tmp # ...and remove them (unless they're the root table)
           from_tables.splice pos, 1 if pos > -1 and table isnt root_join_table
 
-        a = [tableA, columnA].join '.'
-        b = [tableB, columnB].join '.'
-        clause = "#{direction} JOIN #{target} ON #{a} = #{b}"
+        a = [tableA, columnA].join '].['
+        b = [tableB, columnB].join '].['
+        clause = "#{direction} JOIN [#{target}] ON [#{a}] = [#{b}]"
         joins.push clause
       join_clause = joins.join ' '
 
@@ -188,7 +189,7 @@ class MSSQL
     if make_last? and from_tables.indexOf make_last > -1
       element = from_tables.splice from_tables.indexOf(make_last), 1
       from_tables.push element
-    from_clause += from_tables.join ','
+    from_clause += '[' + from_tables.join('],[') + ']'
 
     where_clause = ''
     sql_params = []
@@ -222,8 +223,8 @@ class MSSQL
       for item in params.order_by
         item = item.split '.'
         item[0] = @table_name if item[0] is '@' # replace '@' with model base table
-        item = item.join '.' if item.length > 1
-        order_by_clause += item + ','
+        item = item.join '].[' if item.length > 1
+        order_by_clause += "[#{item}]" + ','
       order_by_clause = order_by_clause.slice 0, -1 # trim trailing comma
 
     offset_clause = ''

@@ -70,13 +70,13 @@ describe 'MSSQL', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
-      query.should.equal 'SELECT table1.column1,test.* FROM table1,test'
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]'
 
     it 'should limit SELECT on base table if specified', ->
       [query, params] = @mssql.build_query
         select:
           '@': ['name', 'date']
-      query.should.equal 'SELECT test.name,test.date FROM test'
+      query.should.equal 'SELECT [test].[name],[test].[date] FROM [test]'
 
     it 'should throw if no valid SELECT fields', ->
       try
@@ -90,26 +90,26 @@ describe 'MSSQL', ->
     it 'should add default SELECT on base table', ->
       [query, params] = @mssql.build_query
         order_by: ['columnX']
-      query.should.equal 'SELECT test.* FROM test   ORDER BY columnX'
+      query.should.equal 'SELECT [test].* FROM [test]   ORDER BY [columnX]'
 
     it 'should build simple query with column alias', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1:alias1']
-      query.should.equal 'SELECT table1.column1 AS alias1,test.* FROM table1,test'
+      query.should.equal 'SELECT [table1].[column1] AS alias1,[test].* FROM [table1],[test]'
 
     it 'should build query with multiple columns on same table', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1', 'column2', 'column3: alias3']
-      query.should.equal 'SELECT table1.column1,table1.column2,table1.column3 AS alias3,test.* FROM table1,test'
+      query.should.equal 'SELECT [table1].[column1],[table1].[column2],[table1].[column3] AS alias3,[test].* FROM [table1],[test]'
 
     it 'should build query with multiple tables', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
           table2: ['column2:alias2']
-      query.should.equal 'SELECT table1.column1,table2.column2 AS alias2,test.* FROM table1,table2,test'
+      query.should.equal 'SELECT [table1].[column1],[table2].[column2] AS alias2,[test].* FROM [table1],[table2],[test]'
 
     it 'should build query with JOIN', ->
       [query, params] = @mssql.build_query
@@ -118,7 +118,7 @@ describe 'MSSQL', ->
         join: [
           ['@._id', 'table2.vehicle_id']
         ]
-      query.should.equal 'SELECT table2.column1,test.* FROM test LEFT JOIN table2 ON test._id = table2.vehicle_id'
+      query.should.equal 'SELECT [table2].[column1],[test].* FROM [test] LEFT JOIN [table2] ON [test].[_id] = [table2].[vehicle_id]'
 
     it 'should honor provided JOIN direction', ->
       [query, params] = @mssql.build_query
@@ -127,7 +127,7 @@ describe 'MSSQL', ->
         join: [
           ['RIGHT', '@._id', 'table2.vehicle_id']
         ]
-      query.should.equal 'SELECT table2.column1,test.* FROM test RIGHT JOIN table2 ON test._id = table2.vehicle_id'
+      query.should.equal 'SELECT [table2].[column1],[test].* FROM [test] RIGHT JOIN [table2] ON [test].[_id] = [table2].[vehicle_id]'
 
     it 'should build query with multiple JOIN on same table', ->
       [query, params] = @mssql.build_query
@@ -138,21 +138,21 @@ describe 'MSSQL', ->
           ['@._id', 'table2.vehicle_id']
           ['@.column1', 'table1.column1']
         ]
-      query.should.equal 'SELECT table1.column1,table2.column1,test.* FROM test LEFT JOIN table2 ON test._id = table2.vehicle_id LEFT JOIN table1 ON test.column1 = table1.column1'
+      query.should.equal 'SELECT [table1].[column1],[table2].[column1],[test].* FROM [test] LEFT JOIN [table2] ON [test].[_id] = [table2].[vehicle_id] LEFT JOIN [table1] ON [test].[column1] = [table1].[column1]'
 
     it 'should build query with ORDER BY', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
         order_by: ['columnX']
-      query.should.equal 'SELECT table1.column1,test.* FROM table1,test   ORDER BY columnX'
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [columnX]'
 
     it 'should build query with ORDER BY (with table)', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
         order_by: ['tableX.columnX']
-      query.should.equal 'SELECT table1.column1,test.* FROM table1,test   ORDER BY tableX.columnX'
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [tableX].[columnX]'
 
     it 'should build query with JOIN and ORDER BY', ->
       [query, params] = @mssql.build_query
@@ -163,7 +163,7 @@ describe 'MSSQL', ->
           ['table1._id', 'table2.vehicle_id']
         ]
         order_by: ['column1']
-      query.should.equal 'SELECT table1.column1,test.* FROM test LEFT JOIN table1 ON test.column1 = table1.column1 LEFT JOIN table2 ON table1._id = table2.vehicle_id  ORDER BY column1'
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [test] LEFT JOIN [table1] ON [test].[column1] = [table1].[column1] LEFT JOIN [table2] ON [table1].[_id] = [table2].[vehicle_id]  ORDER BY [column1]'
 
     it 'should build query with WHERE', ->
       [query, params] = @mssql.build_query
@@ -172,7 +172,7 @@ describe 'MSSQL', ->
         where: [
           ['@._id', @mssql.eq 1234]
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00"
       params.should.have.length 1
       params[0].value.should.equal 1234
 
@@ -183,7 +183,7 @@ describe 'MSSQL', ->
         where: [
           ['@._id', @mssql.in [1,2,3,4]]
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] IN (@id00,@id01,@id02,@id03)"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] IN (@id00,@id01,@id02,@id03)"
       params.should.have.length 4
       params[1].value.should.equal 2
 
@@ -194,7 +194,7 @@ describe 'MSSQL', ->
         where: [
           ['@._id', @mssql.in 3]
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] IN (@id00)"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] IN (@id00)"
       params.should.have.length 1
       params[0].value.should.equal 3
 
@@ -205,7 +205,7 @@ describe 'MSSQL', ->
         where: [
           ['@._id', @mssql.starts_with 'bea']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] LIKE @id00"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] LIKE @id00"
       params.should.have.length 1
       params[0].value.should.equal 'bea%'
 
@@ -214,7 +214,7 @@ describe 'MSSQL', ->
         select:
           table1: ['column1']
         where: []
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]"
       params.should.have.length 0
 
     it 'should ignore broken WHERE', ->
@@ -222,7 +222,7 @@ describe 'MSSQL', ->
         select:
           table1: ['column1']
         where: {}
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]"
       params.should.have.length 0
 
     it 'should build query with multiple WHERE', ->
@@ -233,7 +233,7 @@ describe 'MSSQL', ->
           ['@._id', @mssql.eq 1234]
           ['table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 AND [table1].[name] < @table1name10"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00 AND [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -245,7 +245,7 @@ describe 'MSSQL', ->
           ['@._id', @mssql.eq 1234]
           ['OR', 'table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 OR [table1].[name] < @table1name10"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00 OR [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -257,7 +257,7 @@ describe 'MSSQL', ->
           ['AND', '@._id', @mssql.eq 1234]
           ['OR', 'table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 OR [table1].[name] < @table1name10"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00 OR [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -269,7 +269,7 @@ describe 'MSSQL', ->
           ['@._id', @mssql.eq 1234]
           ['ZAZZ', 'table1.name', @mssql.lt 'fred']
         ]
-      query.should.equal "SELECT table1.column1,test.* FROM table1,test  WHERE [test].[_id] = @id00 AND [table1].[name] < @table1name10"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00 AND [table1].[name] < @table1name10"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
@@ -286,7 +286,7 @@ describe 'MSSQL', ->
           ['table1.name', @mssql.contains 'fred']
         ]
         order_by: ['column1']
-      query.should.equal "SELECT table1.column1,test.* FROM test LEFT JOIN table1 ON test.column1 = table1.column1 LEFT JOIN table2 ON table1._id = table2.vehicle_id WHERE [test].[_id] = @id00 AND [table1].[name] LIKE @table1name10 ORDER BY column1"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [test] LEFT JOIN [table1] ON [test].[column1] = [table1].[column1] LEFT JOIN [table2] ON [table1].[_id] = [table2].[vehicle_id] WHERE [test].[_id] = @id00 AND [table1].[name] LIKE @table1name10 ORDER BY [column1]"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
