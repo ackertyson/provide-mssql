@@ -1,13 +1,13 @@
-#provide-mssql
+# provide-mssql
 
 JSON model layer for Microsoft SQL Server (via Tedious) database in Express
 apps.
 
-##Installation
+## Installation
 
 `npm i --save provide-mssql`
 
-##Usage
+## Usage
 
 Model (called from Express handler--for which consider [provide-handler](https://www.npmjs.com/package/provide-handler)):
 ```
@@ -56,7 +56,7 @@ queries, as we don't actually want to change that value.
 Also note that model methods use "fat-arrow" to preserve context (so `this`
 refers to the local class).
 
-##Query Builder
+## Query Builder
 ```
 select:
   table1: ['columnA', 'columnD']
@@ -145,6 +145,6 @@ method_with_challenging query: (item_id) =>
   yield @request query, @build_param 'id', 'Int', item_id
 ```
 
-##Testing
+## Testing
 
 `npm test`
