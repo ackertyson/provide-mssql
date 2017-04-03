@@ -161,12 +161,26 @@ describe 'MSSQL', ->
         order_by: ['tableX.columnX']
       query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [tableX].[columnX]'
 
+    it 'should build query with ORDER BY (with table and direction)', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        order_by: ['tableX.columnX DESC']
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [tableX].[columnX] DESC'
+
     it 'should build query with ORDER BY (with base table)', ->
       [query, params] = @mssql.build_query
         select:
           table1: ['column1']
         order_by: ['@.columnX']
       query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [test].[columnX]'
+
+    it 'should build query with ORDER BY (with base table and direction)', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        order_by: ['@.columnX DESC']
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [test].[columnX] DESC'
 
     it 'should build query with JOIN and ORDER BY', ->
       [query, params] = @mssql.build_query
