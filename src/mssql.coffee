@@ -221,10 +221,15 @@ class MSSQL
     if params.order_by?
       order_by_clause = 'ORDER BY '
       for item in params.order_by
-        item = item.split '.'
-        item[0] = @table_name if item[0] is '@' # replace '@' with model base table
-        item = item.join '].[' if item.length > 1
-        order_by_clause += "[#{item}]" + ','
+        [table, column] = item.split '.'
+        [table, column] = [@table_name, table] unless column? # no table specified; use model base table
+        table = @table_name if table is '@' # replace '@' with model base table
+        [column, direction] = column.split ' '
+        order_by_clause += "[#{table}].[#{column}]"
+        if direction? and direction.toString().toUpperCase() in ['ASC', 'DESC']
+          order_by_clause += " #{direction},"
+        else
+          order_by_clause += ','
       order_by_clause = order_by_clause.slice 0, -1 # trim trailing comma
 
     offset_clause = ''

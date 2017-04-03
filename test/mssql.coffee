@@ -90,7 +90,7 @@ describe 'MSSQL', ->
     it 'should add default SELECT on base table', ->
       [query, params] = @mssql.build_query
         order_by: ['columnX']
-      query.should.equal 'SELECT [test].* FROM [test]   ORDER BY [columnX]'
+      query.should.equal 'SELECT [test].* FROM [test]   ORDER BY [test].[columnX]'
 
     it 'should build simple query with column alias', ->
       [query, params] = @mssql.build_query
@@ -145,7 +145,14 @@ describe 'MSSQL', ->
         select:
           table1: ['column1']
         order_by: ['columnX']
-      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [columnX]'
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [test].[columnX]'
+
+    it 'should build query with ORDER BY direction', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        order_by: ['columnX DESC']
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [test].[columnX] DESC'
 
     it 'should build query with ORDER BY (with table)', ->
       [query, params] = @mssql.build_query
@@ -153,6 +160,13 @@ describe 'MSSQL', ->
           table1: ['column1']
         order_by: ['tableX.columnX']
       query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [tableX].[columnX]'
+
+    it 'should build query with ORDER BY (with base table)', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        order_by: ['@.columnX']
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [table1],[test]   ORDER BY [test].[columnX]'
 
     it 'should build query with JOIN and ORDER BY', ->
       [query, params] = @mssql.build_query
@@ -163,7 +177,7 @@ describe 'MSSQL', ->
           ['table1._id', 'table2.vehicle_id']
         ]
         order_by: ['column1']
-      query.should.equal 'SELECT [table1].[column1],[test].* FROM [test] LEFT JOIN [table1] ON [test].[column1] = [table1].[column1] LEFT JOIN [table2] ON [table1].[_id] = [table2].[vehicle_id]  ORDER BY [column1]'
+      query.should.equal 'SELECT [table1].[column1],[test].* FROM [test] LEFT JOIN [table1] ON [test].[column1] = [table1].[column1] LEFT JOIN [table2] ON [table1].[_id] = [table2].[vehicle_id]  ORDER BY [test].[column1]'
 
     it 'should build query with WHERE', ->
       [query, params] = @mssql.build_query
@@ -286,7 +300,7 @@ describe 'MSSQL', ->
           ['table1.name', @mssql.contains 'fred']
         ]
         order_by: ['column1']
-      query.should.equal "SELECT [table1].[column1],[test].* FROM [test] LEFT JOIN [table1] ON [test].[column1] = [table1].[column1] LEFT JOIN [table2] ON [table1].[_id] = [table2].[vehicle_id] WHERE [test].[_id] = @id00 AND [table1].[name] LIKE @table1name10 ORDER BY [column1]"
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [test] LEFT JOIN [table1] ON [test].[column1] = [table1].[column1] LEFT JOIN [table2] ON [table1].[_id] = [table2].[vehicle_id] WHERE [test].[_id] = @id00 AND [table1].[name] LIKE @table1name10 ORDER BY [test].[column1]"
       params.should.have.length 2
       params[0].value.should.equal 1234
 
