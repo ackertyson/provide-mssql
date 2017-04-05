@@ -135,14 +135,14 @@ See `test/mssql.coffee` for more query examples. If you run into a query that
 won't build properly, just pass it as a string (with optional params):
 
 ```
-method_with_challenging query: (item_id) =>
+method_with_challenging_query: (item_id) =>
   query = """SELECT *
     FROM table1
     LEFT JOIN table2 ON table1.field1 = table2.field1
       AND table1.field2 = table2.field2
     WHERE table1.id = @id"""
 
-  yield @request query, @build_param 'id', 'Int', item_id
+  yield @request query, @build_param('id', 'Int', item_id)
 ```
 
 ## Testing

@@ -12,7 +12,8 @@
     "dist/"
   ],
   "scripts": {
-    "test": "grunt test"
+    "test": "grunt test",
+    "version": "grunt"
   },
   "author": "tyson@devmode.com",
   "license": "ISC",
