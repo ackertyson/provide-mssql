@@ -148,6 +148,46 @@ method_with_challenging_query: (item_id, other_id) =>
     @build_param('other', 'Int', other_id)
 ```
 
+## Transactions
+
+You may pass an array of query objects to perform as a [transaction](http://tediousjs.github.io/tedious/api-connection.html#function_transaction):
+
+```
+q1 =
+  update: { success: 1 }
+  where: [
+    ['id', model.eq item_id]
+  ]
+q2 =
+  select: {}
+  where: [
+    ['@.item_id', model.eq item_id]
+  ]
+yield @transaction [{ name: 'some_query', query: q1 }, { name: 'another_query', query: q2 }]
+```
+
+...returned result in such a case would look like:
+
+```
+{
+  some_query: [results of q1]
+  another_query: [results of q2]
+}
+```
+
+Query results will be "named" with the array index they are passed in with if no
+`name` property is provided.
+
+You may also pass string-literal queries like:
+
+```
+q1 = "SELECT * FROM items WHERE id = @id AND field2 = @other"
+p1 = [@build_params('id', 'Int', item_id), @build_params('other', 'Int', other_id)]
+yield @transaction [{ name: 'put', query: q1, params: p1 }, ...]
+```
+
+Note in that case that the `params` property for each query should be an array.
+
 ## Testing
 
 `npm test`

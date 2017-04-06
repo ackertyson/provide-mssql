@@ -1,7 +1,9 @@
+each = require 'async/eachOfSeries'
 crypto = require 'crypto'
 tedious = require 'tedious'
 Request = tedious.Request
 TYPES = tedious.TYPES
+Connection = tedious.Connection
 ConnectionPool = require 'tedious-connection-pool'
 
 class MSSQL
@@ -36,8 +38,11 @@ class MSSQL
     hash = crypto.createHash 'sha256'
     hash.update "#{server}#{user_name}#{password}#{@database}"
     dbconn = hash.digest 'hex'
-    @constructor._cache[dbconn] ?= new ConnectionPool pool_config, config
-    @pool = @constructor._cache[dbconn]
+    @constructor._cache[dbconn] ?=
+      connection: open: -> new Connection config
+      pool: new ConnectionPool pool_config, config
+    @pool = @constructor._cache[dbconn].pool
+    @connection = @constructor._cache[dbconn].connection
 
     Date::to_mssql_string = () ->
       @getUTCFullYear()+'-'+@_pad(@getUTCMonth()+1)+'-'+@_pad(@getUTCDate())+' '+@_pad(@getUTCHours())+':'+@_pad(@getUTCMinutes())+':'+@_pad(@getUTCSeconds())
@@ -349,6 +354,51 @@ class MSSQL
     for own column, value of body # leave PRIMARY_KEY (if defined) out of sanitized body
       sanitized[column] = value if @schema[column]? and not (@primary_key? and column is @primary_key)
     sanitized
+
+
+  transaction: (queries) =>
+    new Promise (resolve, reject) =>
+      _cleanup = (err, results) ->
+        return reject err if err?
+        resolve results
+      connection = @connection.open()
+      connection.on 'connect', (err) =>
+        return reject err if err?
+        connection.transaction (err, done) =>
+          return reject err if err?
+          results = {}
+          each queries, ({ name, query, params }, index, next) =>
+            try
+              [query, params] = @build_query query if @typeof query, 'object'
+            catch ex
+              next @error_msg ex, query, params...
+            name ?= index
+            results[name] = []
+            request = new Request query, (err, count) =>
+              if err?
+                next @error_msg err, query, params...
+              else
+                next()
+
+            for param in params
+              param.value = JSON.stringify(param.value) if @typeof param.value, 'object'
+              if TYPES[param.type]?
+                request.addParameter param.name, TYPES[param.type], param.value, param.options
+              else
+                msg = if param?.type? then 'No such TDS datatype: '+param.type.toString() else 'Malformed param: '+param
+                next @error_msg { message: msg }, query, params...
+
+            request.on 'row', (columns) =>
+              row = {}
+              columns.forEach (column) =>
+                column.value = column.value.trim() if @typeof column.value, 'string'
+                row[column.metadata.colName.toLowerCase()] = column.value
+              results[name].push row
+
+            connection.execSql request
+
+          , (err) -> # call TX callback with async/each result
+            done err, _cleanup, results
 
 
   typeof: (subject, type) ->
