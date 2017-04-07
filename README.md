@@ -3,6 +3,10 @@
 JSON model layer for Microsoft SQL Server (via Tedious) database in Express
 apps.
 
+NOTE: version 0.3.0 has breaking changes to the (undocumented) `filter`
+functions--they are now expected to be an object rather than an array with a
+single (object) element.
+
 ## Installation
 
 `npm i --save provide-mssql`
