@@ -8,18 +8,19 @@ class BaseModel extends MSSQL
     Promise::parallel = @promise_all_from_obj
 
 
-  # these functions assume that FILTERS is an array which *may* contain an object as the sole element
-  has_filter: (filters, key) -> filters[0]?[key] or false
+  # these functions test for properties on an object
+  has_filter: (filters, key) ->
+    return false unless filters?
+    filters[key] or false
   get_filter: (args...) -> @has_filter args...
   pop_filter: (filters, key) ->
+    return unless filters?
     value = @has_filter filters, key
-    delete filters[0][key] if value
+    delete filters[key] if value
     return value
   set_filter: (filters, key, value, safe=false) ->
-    if filters[0]?
-      filters[0][key] = value unless filters[0][key]? and safe
-    else
-      filters = [{ key: value }]
+    return unless filters?
+    filters[key] = value unless filters[key]? and safe
 
 
   attach: (collection, key) ->

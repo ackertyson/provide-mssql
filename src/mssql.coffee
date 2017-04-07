@@ -339,7 +339,7 @@ class MSSQL
     [param_name, parameters]
 
 
-  request: (query, params=[], connection) =>
+  request: (query, params=[], transaction) =>
     new Promise (resolve, reject) =>
       try
         [query, params] = @build_query query if @typeof query, 'object'
@@ -347,8 +347,8 @@ class MSSQL
         console.log @error_msg ex, query, params
         reject ex
       data = []
-      if connection? # use provided connection (probably for TX)
-        cn = acquire: (callback) -> callback null, connection
+      if transaction? # use provided connection (probably for TX)
+        cn = acquire: (callback) -> callback null, transaction.connection
       else # acquire new connection from pool
         cn = @pool
       cn.acquire (err, connection) =>
@@ -356,10 +356,11 @@ class MSSQL
           console.log @error_msg err, query, params
           return reject err
         @_execStmt(null, connection, query, params).then (result) ->
-          connection.release()
+          connection.release() if connection.release? # release pool connection
           resolve result.data
         .catch (err) =>
-          connection.release()
+          connection.release() if connection.release? # release pool connection
+          return transaction.done err if transaction? # let TX handle errors/cleanup
           console.log @error_msg err, query, params
           reject err
 
@@ -370,6 +371,18 @@ class MSSQL
     for own column, value of body # leave PRIMARY_KEY (if defined) out of sanitized body
       sanitized[column] = value if @schema[column]? and not (@primary_key? and column is @primary_key)
     sanitized
+
+
+  start_transaction: (cleanup) =>
+    cleanup ?= -> # noop function if no TX done/cleanup handler provided
+    new Promise (resolve, reject) =>
+      connection = @connection.open()
+      connection.on 'connect', (err) ->
+        return reject err if err?
+        connection.transaction (err, _done) ->
+          return reject err if err?
+          done = (err) -> _done err, cleanup
+          resolve { connection, done }
 
 
   transaction: (queries) =>
@@ -390,7 +403,7 @@ class MSSQL
               return next ex
             name ?= index
             params ?= []
-            @_execStmt(name, connection, query, params).then (result) ->
+            @_execStmt(name, { connection }, query, params).then (result) ->
               results[result.name] = result.data
               next()
             .catch next
