@@ -265,7 +265,7 @@ class MSSQL
     d.toISOString()
 
 
-  error_msg: (err, query, params...) ->
+  error_msg: (err, query, params=[]) ->
     ps = ''
     for param in params
       for k, v of param
@@ -277,7 +277,7 @@ class MSSQL
       PARAMS:\n#{ps}"""
 
 
-  _execStmt: (name, connection, query, params...) ->
+  _execStmt: (name, connection, query, params=[]) ->
     new Promise (resolve, reject) =>
       results = { name: name, data: [] }
       request = new Request query, (err, count) ->
@@ -339,24 +339,28 @@ class MSSQL
     [param_name, parameters]
 
 
-  request: (query, params...) =>
+  request: (query, params=[], connection) =>
     new Promise (resolve, reject) =>
       try
         [query, params] = @build_query query if @typeof query, 'object'
       catch ex
-        console.log @error_msg ex, query, params...
+        console.log @error_msg ex, query, params
         reject ex
       data = []
-      @pool.acquire (err, connection) =>
+      if connection? # use provided connection (probably for TX)
+        cn = acquire: (callback) -> callback null, connection
+      else # acquire new connection from pool
+        cn = @pool
+      cn.acquire (err, connection) =>
         if err?
-          console.log @error_msg err, query, params...
+          console.log @error_msg err, query, params
           return reject err
-        @_execStmt(null, connection, query, params...).then (result) ->
+        @_execStmt(null, connection, query, params).then (result) ->
           connection.release()
           resolve result.data
         .catch (err) =>
           connection.release()
-          console.log @error_msg err, query, params...
+          console.log @error_msg err, query, params
           reject err
 
 
@@ -386,7 +390,7 @@ class MSSQL
               return next ex
             name ?= index
             params ?= []
-            @_execStmt(name, connection, query, params...).then (result) ->
+            @_execStmt(name, connection, query, params).then (result) ->
               results[result.name] = result.data
               next()
             .catch next

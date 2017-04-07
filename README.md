@@ -143,10 +143,15 @@ method_with_challenging_query: (item_id, other_id) =>
     WHERE table1.id = @id
     AND table2.other_id = @other"""
 
-  yield @request query,
+  # version 0.3.x param syntax (see note below)
+  yield @request query, [
     @build_param('id', 'Int', item_id),
     @build_param('other', 'Int', other_id)
+  ]
 ```
+
+NOTE: in versions < 0.3.x, `params` for string-literal queries should be passed
+as individual arguments, not as an array.
 
 ## Transactions
 
