@@ -3,9 +3,12 @@
 JSON model layer for Microsoft SQL Server (via Tedious) database in Express
 apps.
 
-NOTE: version 0.3.0 has breaking changes to the (undocumented) `filter`
-functions--they are now expected to be an object rather than an array with a
-single (object) element.
+BREAKING CHANGES in v0.3.0:
+
+- `params` passed to a string-literal query should be passed as an explicit array
+    instead of as individual arguments (see below)
+- the (undocumented) `filter` functions are now expected to be an object
+    rather than an array with a single (object) element.
 
 ## Installation
 
@@ -196,6 +199,36 @@ yield @transaction [{ name: 'put', query: q1, params: p1 }, ...]
 ```
 
 Note in that case that the `params` property for each query should be an array.
+
+You can also perform transactions as a series of requests in your model:
+
+```
+tx = yield @start_transaction() # start transaction
+yield @some_write_query tx
+
+item = yield Item.get id, tx
+unless item?
+  return tx.done 'Couldn't get item' # roll back transaction
+
+another_query =
+  select: {}
+  where: [
+    ['@.item_id', model.eq item.id]
+  ]
+yield @request another_query, null, tx # pass explicit null PARAMS arg
+tx.done() # commit transaction
+```
+
+Note that you must pass the transaction (the return value of
+`start_transaction()`) to each request so the handler knows to use that rather
+than acquiring a new `pool` connection. Neglecting to do this may cause the
+request to hang, which is bad because transactions place a write-lock on the DB.
+This means no other requests can be processed while the transaction is open!
+
+It's also important not to forget calling `transaction.done()` when you're
+finished (to commit), or `transaction.done(err)` (to roll back) if you're
+handing errors in your model method (errors thrown in the `request` plumbing are
+already handled this way).
 
 ## Testing
 

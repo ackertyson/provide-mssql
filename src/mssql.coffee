@@ -347,7 +347,7 @@ class MSSQL
         console.log @error_msg ex, query, params
         reject ex
       data = []
-      if transaction? # use provided connection (probably for TX)
+      if transaction? # use provided connection
         cn = acquire: (callback) -> callback null, transaction.connection
       else # acquire new connection from pool
         cn = @pool
