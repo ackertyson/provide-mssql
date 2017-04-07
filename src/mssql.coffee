@@ -277,6 +277,31 @@ class MSSQL
       PARAMS:\n#{ps}"""
 
 
+  _execStmt: (name, connection, query, params...) ->
+    new Promise (resolve, reject) =>
+      results = { name: name, data: [] }
+      request = new Request query, (err, count) ->
+        return reject err if err?
+        resolve results
+
+      for param in params
+        param.value = JSON.stringify(param.value) if @typeof param.value, 'object'
+        if TYPES[param.type]?
+          request.addParameter param.name, TYPES[param.type], param.value, param.options
+        else
+          msg = if param?.type? then 'No such TDS datatype: '+param.type.toString() else 'Malformed param: '+param
+          reject new Error msg
+
+      request.on 'row', (columns) =>
+        row = {}
+        columns.forEach (column) =>
+          column.value = column.value.trim() if @typeof column.value, 'string'
+          row[column.metadata.colName.toLowerCase()] = column.value
+        results.data.push row
+
+      connection.execSql request
+
+
   mssql_date_string: (date) ->
     return date if date is null
     if @typeof date, 'string'
@@ -319,33 +344,20 @@ class MSSQL
       try
         [query, params] = @build_query query if @typeof query, 'object'
       catch ex
-        reject @error_msg ex, query, params...
+        console.log @error_msg ex, query, params...
+        reject ex
       data = []
       @pool.acquire (err, connection) =>
-        reject @error_msg err, query, params... if err?
-        request = new Request query, (err, count) =>
+        if err?
+          console.log @error_msg err, query, params...
+          return reject err
+        @_execStmt(null, connection, query, params...).then (result) ->
           connection.release()
-          if err?
-            reject @error_msg err, query, params...
-          else
-            resolve data
-
-        for param in params
-          param.value = JSON.stringify(param.value) if @typeof param.value, 'object'
-          if TYPES[param.type]?
-            request.addParameter param.name, TYPES[param.type], param.value, param.options
-          else
-            msg = if param?.type? then 'No such TDS datatype: '+param.type.toString() else 'Malformed param: '+param
-            reject @error_msg { message: msg }, query, params...
-
-        request.on 'row', (columns) =>
-          row = {}
-          columns.forEach (column) =>
-            column.value = column.value.trim() if @typeof column.value, 'string'
-            row[column.metadata.colName.toLowerCase()] = column.value
-          data.push row
-
-        connection.execSql request
+          resolve result.data
+        .catch (err) =>
+          connection.release()
+          console.log @error_msg err, query, params...
+          reject err
 
 
   sanitize: (body) ->
@@ -371,32 +383,13 @@ class MSSQL
             try
               [query, params] = @build_query query if @typeof query, 'object'
             catch ex
-              next @error_msg ex, query, params...
+              return next ex
             name ?= index
-            results[name] = []
-            request = new Request query, (err, count) =>
-              if err?
-                next @error_msg err, query, params...
-              else
-                next()
-
-            for param in params
-              param.value = JSON.stringify(param.value) if @typeof param.value, 'object'
-              if TYPES[param.type]?
-                request.addParameter param.name, TYPES[param.type], param.value, param.options
-              else
-                msg = if param?.type? then 'No such TDS datatype: '+param.type.toString() else 'Malformed param: '+param
-                next @error_msg { message: msg }, query, params...
-
-            request.on 'row', (columns) =>
-              row = {}
-              columns.forEach (column) =>
-                column.value = column.value.trim() if @typeof column.value, 'string'
-                row[column.metadata.colName.toLowerCase()] = column.value
-              results[name].push row
-
-            connection.execSql request
-
+            params ?= []
+            @_execStmt(name, connection, query, params...).then (result) ->
+              results[result.name] = result.data
+              next()
+            .catch next
           , (err) -> # call TX callback with async/each result
             done err, _cleanup, results
 
