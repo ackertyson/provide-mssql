@@ -1,7 +1,12 @@
 # provide-mssql
 
-JSON model layer for Microsoft SQL Server (via Tedious) database in Express
+JSON model layer for Microsoft SQL Server database (via Tedious) in Express
 apps.
+
+BREAKING CHANGES in v0.4.0:
+
+- model definitions and instantiation strategy
+- query comparators are static members of MSSQL class
 
 BREAKING CHANGES in v0.3.0:
 
@@ -18,9 +23,9 @@ BREAKING CHANGES in v0.3.0:
 
 Model (called from Express handler--for which consider [provide-handler](https://www.npmjs.com/package/provide-handler)):
 ```
-model = require 'provide-mssql'
+MSSQL = require 'provide-mssql'
 
-class TicketModel
+class TicketModel extends MSSQL
   table: # DB table definition
     name: 'ticket' # table name in DB
     primary_key: '_id' # optional but important for INSERT/UPDATE queries
@@ -30,38 +35,40 @@ class TicketModel
       received_date: 'Date'
       hours: 'Decimal': precision: 4, scale: 2 # specify additional param options
 
-  # and now the model methods....
-  all: (filters...) =>
-    # JSON object will be built into SQL query...
-    params =
-      select:
-        customer: ['name: customer_name', 'region']
-      join: [
-        ['@.customer_id', 'customer._id']
-      ]
-    yield @request params
+  # and now the 'vanilla' Promise-based model methods...
+  methodA: (args...) ->
+    i_return_a_normal_promise args...
 
-  find_by_customer: (id) =>
-    params =
-      select: {}
-      join: [
-        ['@.customer_id', 'customer._id']
-      ]
-      where: [
-        ['@.customer_id', model.eq id]
-      ]
-    yield @request params
+  # ...and model methods (under the 'generators' key) which should be treated as ES6 generator functions....
+  generators:
+    all: (filters...) ->
+      # JSON object will be built into SQL query...
+      params =
+        select:
+          customer: ['name: customer_name', 'region']
+        join: [
+          ['@.customer_id', 'customer._id']
+        ]
+      yield @request params
+
+    find_by_customer: (id) ->
+      params =
+        select: {}
+        join: [
+          ['@.customer_id', 'customer._id']
+        ]
+        where: [
+          ['@.customer_id', MSSQL.eq id]
+        ]
+      yield @request params
 
 
-module.exports = model.provide TicketModel
+module.exports = new TicketModel
 ```
 
 Notice how we define a `primary_key` in the schema--this is to exclude that
 column (`_id` in this example) from the fields affected by INSERT/UPDATE
 queries, as we don't actually want to change that value.
-
-Also note that model methods use "fat-arrow" to preserve context (so `this`
-refers to the local class).
 
 ## Query Builder
 ```
@@ -101,8 +108,8 @@ item; default is `LEFT`.
 
 ```
 where: [
-  ['@.some_id', model.eq 1234]
-  ['table2.first_name', model.contains 'sephina']
+  ['@.some_id', MSSQL.eq 1234]
+  ['table2.first_name', MSSQL.contains 'sephina']
 ]
 
 WHERE <base_table>.some_id = 1234
@@ -111,8 +118,8 @@ AND table2.first_name LIKE '%sephina%'
 
 ```
 where: [
-  ['@.some_id', model.eq 1234]
-  ['OR', 'table2.first_name', model.contains 'sephina']
+  ['@.some_id', MSSQL.eq 1234]
+  ['OR', 'table2.first_name', MSSQL.contains 'sephina']
 ]
 
 WHERE <base_table>.some_id = 1234
@@ -168,12 +175,12 @@ You may pass an array of query objects to perform as a [transaction](http://tedi
 q1 =
   update: { success: 1 }
   where: [
-    ['id', model.eq item_id]
+    ['id', MSSQL.eq item_id]
   ]
 q2 =
   select: {}
   where: [
-    ['@.item_id', model.eq item_id]
+    ['@.item_id', MSSQL.eq item_id]
   ]
 yield @transaction [{ name: 'some_query', query: q1 }, { name: 'another_query', query: q2 }]
 ```
@@ -208,12 +215,12 @@ yield @some_write_query tx
 
 item = yield Item.get id, tx
 unless item?
-  return tx.done 'Couldn't get item' # roll back transaction
+  return tx.done 'No such item' # roll back transaction
 
 another_query =
   select: {}
   where: [
-    ['@.item_id', model.eq item.id]
+    ['@.item_id', MSSQL.eq item.id]
   ]
 yield @request another_query, null, tx # pass explicit null PARAMS arg
 tx.done() # commit transaction

@@ -12,25 +12,23 @@
     "dist/"
   ],
   "scripts": {
-    "test": "grunt test",
-    "version": "grunt"
+    "test": "NODE_ENV=test gulp test"
   },
   "author": "tyson@devmode.com",
   "license": "ISC",
   "dependencies": {
-    "async": "^2.3.0",
-    "provide-model": "^0.1.4",
+    "async": "^2.6.0",
     "tedious": "^1.14.0",
     "tedious-connection-pool": "^1.0.5"
   },
   "devDependencies": {
-    "chai": "^3.5.0",
-    "grunt": "^1.0.1",
-    "grunt-contrib-clean": "^1.0.0",
-    "grunt-contrib-coffee": "^1.0.0",
-    "grunt-contrib-uglify": "^2.0.0",
-    "grunt-mocha-test": "^0.13.2",
-    "mocha": "^3.2.0",
-    "sinon": "^1.17.6"
+    "chai": "^4.1.2",
+    "del": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-coffee": "^2.3.4",
+    "gulp-mocha": "^4.3.1",
+    "mocha": "^4.0.1",
+    "mockery": "^2.1.0",
+    "sinon": "^4.1.2"
   }
 }
