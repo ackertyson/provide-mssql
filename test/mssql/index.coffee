@@ -1,7 +1,15 @@
-MSSQL = require '../../src/index'
+DB =
+  tedious:
+    Connection: ->
+  pool: ->
+mockery.registerMock 'tedious', DB.tedious
+mockery.registerMock 'tedious-connection-pool', DB.pool
 
 describe 'MSSQL', ->
   before (done) ->
+    mockery.enable useCleanCache: true
+    mockery.warnOnUnregistered false
+    MSSQL = require '../../src/index'
     @MSSQL = MSSQL
     class TestModel extends MSSQL
       table:
@@ -34,6 +42,11 @@ describe 'MSSQL', ->
     @model = new TestModel null, null, null, 'testdb'
     done()
 
+  after (done) ->
+    mockery.disable()
+    done()
+
+
   describe 'ctor', ->
     it 'should add DB conn to cache', ->
       @MSSQL._cache.should.be.an 'object'
@@ -56,6 +69,7 @@ describe 'MSSQL', ->
 
   describe 'model instance interaction', ->
     before (done) ->
+      MSSQL = @MSSQL
       class ModelX extends MSSQL
         table:
           name: 'fake'
