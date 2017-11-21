@@ -66,6 +66,9 @@ class TicketModel extends MSSQL
 module.exports = new TicketModel
 ```
 
+Note that methods defined under the `generators` key are *still mounted at the
+root level* of the model! So for the example above your handler should still call `Ticket.find_by_customer` (not `Ticket.generators.find_by_customer`).
+
 Notice how we define a `primary_key` in the schema--this is to exclude that
 column (`_id` in this example) from the fields affected by INSERT/UPDATE
 queries, as we don't actually want to change that value.
