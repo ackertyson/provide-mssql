@@ -11,7 +11,7 @@ class MSSQL
   @_cache: {} # static DB connection cache
   @_all_schema: {} # static SCHEMA store of all models
 
-  constructor: (server, user_name, password, @database) ->
+  constructor: (server, user_name, password, @database, options={}) ->
     unless @table.name?
       throw new Error "Please define a TABLE property on the model class with a NAME for your DB table"
     server ?= process.env.SQL_SERVER
@@ -29,6 +29,11 @@ class MSSQL
     pool_config =
       min: 2
       max: 10
+    pool_options = options.pool
+    if pool_options?
+      pool_config[k] = v for own k, v of pool_options # add'l config for ConnectionPool
+      delete options.pool
+    config.options[k] = v for own k, v of options # add'l config for Tedious
 
     @schema = @table.schema
     @primary_key = @table.primary_key

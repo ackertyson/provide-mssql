@@ -73,6 +73,22 @@ Notice how we define a `primary_key` in the schema--this is to exclude that
 column (`_id` in this example) from the fields affected by INSERT/UPDATE
 queries, as we don't actually want to change that value.
 
+## Tedious config
+
+Additional Tedious configuration options may be passed as the final (fifth)
+argument to the model constructor. Including a `pool` object will pass those
+options to the ConnectionPool constructor:
+
+```
+options =
+  encrypt: false
+  requestTimeout: 20000
+  pool:
+    log: false
+
+module.exports = new MyModel null, null, null, null, options
+```
+
 ## Query Builder
 ```
 select:
