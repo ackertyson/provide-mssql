@@ -10,7 +10,7 @@ class MSSQL
   @_cache: {} # static DB connection cache
   @_all_schema: {} # static SCHEMA store of all models
 
-  constructor: (Model, server, user_name, password, @database) ->
+  constructor: (Model, server, user_name, password, @database, options={}) ->
     server ?= process.env.SQL_SERVER
     user_name ?= process.env.SQL_USERNAME
     password ?= process.env.SQL_PASSWORD
@@ -26,6 +26,11 @@ class MSSQL
     pool_config =
       min: 2
       max: 10
+    pool_options = options.pool
+    if pool_options?
+      pool_config[k] = v for own k, v of pool_options # add'l config for ConnectionPool
+      delete options.pool
+    config.options[k] = v for own k, v of options # add'l config for Tedious
 
     @schema = Model.prototype?.table?.schema
     @primary_key = Model.prototype?.table?.primary_key

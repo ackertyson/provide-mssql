@@ -63,6 +63,22 @@ queries, as we don't actually want to change that value.
 Also note that model methods use "fat-arrow" to preserve context (so `this`
 refers to the local class).
 
+## Tedious config
+
+Additional Tedious configuration options may be passed as the final (sixth)
+argument to `model.provide()`. Including a `pool` object will pass those options
+to the ConnectionPool constructor:
+
+```
+options =
+  encrypt: false
+  requestTimeout: 20000
+  pool:
+    log: false
+
+module.exports = model.provide ModelName, null, null, null, null, options
+```
+
 ## Query Builder
 ```
 select:
