@@ -65,19 +65,25 @@ refers to the local class).
 
 ## Tedious config
 
-Additional Tedious configuration options may be passed as the final (sixth)
-argument to `model.provide()`. Including a `pool` object will pass those options
-to the ConnectionPool constructor:
+Additional Tedious configuration options (passed to the Tedious contructor as
+`config.options`) may be defined on the model as a `config` block; including a
+`pool` object will pass those values to the ConnectionPool constructor:
 
 ```
-options =
-  encrypt: false
-  requestTimeout: 20000
-  pool:
-    log: false
-
-module.exports = model.provide ModelName, null, null, null, null, options
+class TicketModel
+  config:
+    encrypt: false
+    requestTimeout: 30000
+    pool:
+      max: 20    
+  table:
+    name: 'ticket'
 ```
+
+Configuration values passed in this way are cumulative and shared between all
+models using that same DB connection pool (using same DB+login). Defining the
+same key on multiple models with different values will cause weirdness (there's
+no telling which value will wind up in the final config). So don't do that.
 
 ## Query Builder
 ```

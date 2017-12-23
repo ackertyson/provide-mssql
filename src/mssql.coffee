@@ -8,14 +8,30 @@ ConnectionPool = require 'tedious-connection-pool'
 
 class MSSQL
   @_cache: {} # static DB connection cache
+  @_config: {} # static DB connection cache
   @_all_schema: {} # static SCHEMA store of all models
 
-  constructor: (Model, server, user_name, password, @database, options={}) ->
+  constructor: (Model, server, user_name, password, @database) ->
     server ?= process.env.SQL_SERVER
     user_name ?= process.env.SQL_USERNAME
     password ?= process.env.SQL_PASSWORD
     @database ?= process.env.SQL_DATABASE
-    config =
+
+    @schema = Model.prototype?.table?.schema
+    @primary_key = Model.prototype?.table?.primary_key
+    @table_name = Model.prototype?.table?.name
+    throw new Error "Please define a TABLE property on the model class with a NAME for your DB table" unless @table_name?
+    @ctor = @constructor
+    @ctor._all_schema[@database] ?= {}
+    @ctor._all_schema[@database][@table_name] = @schema or {} # make SCHEMA available to other models
+
+    # hash connection params to find/create cached connection
+    hash = crypto.createHash 'sha256'
+    hash.update "#{server}#{user_name}#{password}#{@database}"
+    dbconn = hash.digest 'hex'
+
+    @ctor._config[dbconn] ?= tedious: null, pool: null
+    @ctor._config[dbconn].tedious ?=
       server: server
       userName: user_name
       password: password
@@ -23,31 +39,22 @@ class MSSQL
         encrypt: true
         database: @database
         useUTC: true
-    pool_config =
+    @ctor._config[dbconn].pool ?=
       min: 2
       max: 10
-    pool_options = options.pool
-    if pool_options?
-      pool_config[k] = v for own k, v of pool_options # add'l config for ConnectionPool
+    options = Model.prototype?.config or {}
+    pool_options = options.pool or {}
+    has_custom_config = (Object.keys(options).length + Object.keys(pool_options).length) > 0
+    if Object.keys(pool_options).length > 0
+      @ctor._config[dbconn].pool[k] = v for own k, v of pool_options # add'l config for ConnectionPool
       delete options.pool
-    config.options[k] = v for own k, v of options # add'l config for Tedious
+    @ctor._config[dbconn].tedious.options[k] = v for own k, v of options # add'l config for Tedious
 
-    @schema = Model.prototype?.table?.schema
-    @primary_key = Model.prototype?.table?.primary_key
-    @table_name = Model.prototype?.table?.name
-    throw new Error "Please define a TABLE property on the model class with a NAME for your DB table" unless @table_name?
-    @constructor._all_schema[@database] ?= {}
-    @constructor._all_schema[@database][@table_name] = @schema or {} # make SCHEMA available to other models
-
-    # hash connection params to find/create cached connection
-    hash = crypto.createHash 'sha256'
-    hash.update "#{server}#{user_name}#{password}#{@database}"
-    dbconn = hash.digest 'hex'
-    @constructor._cache[dbconn] ?=
-      connection: open: -> new Connection config
-      pool: new ConnectionPool pool_config, config
-    @pool = @constructor._cache[dbconn].pool
-    @connection = @constructor._cache[dbconn].connection
+    { tedious, pool } = @ctor._config[dbconn]
+    if !@ctor._cache[dbconn]? or has_custom_config # overwrite existing defs with cumulative custom config
+      @ctor._cache[dbconn] =
+        connection: open: -> new Connection tedious
+        pool: new ConnectionPool pool, tedious
 
     Date::to_mssql_string = () ->
       @getUTCFullYear()+'-'+@_pad(@getUTCMonth()+1)+'-'+@_pad(@getUTCDate())+' '+@_pad(@getUTCHours())+':'+@_pad(@getUTCMinutes())+':'+@_pad(@getUTCSeconds())
@@ -160,7 +167,7 @@ class MSSQL
       for column in columns
         [column, alias] = column.split ':'
         [alias, column, table] = [alias?.toString().trim(), column?.toString().trim(), table?.toString().trim()]
-        if @constructor._all_schema[@database][table]?[column] or (@constructor._all_schema[@database][table]? and column is '*')
+        if @ctor._all_schema[@database][table]?[column] or (@ctor._all_schema[@database][table]? and column is '*')
           column = "[#{column}]" unless column is '*'
           select_clause += "#{separator}[#{table}].#{column}"
           select_clause += " AS #{alias}" if alias?
@@ -324,7 +331,7 @@ class MSSQL
     if table is @table_name # use this model's schema
       type = @schema[column] if @schema?
     else # check other model schema
-      type = @constructor._all_schema[@database][table]?[column]
+      type = @ctor._all_schema[@database][table]?[column]
       column = "#{table}.#{column}"
     options = {}
     # additional options passed as object...
@@ -355,7 +362,7 @@ class MSSQL
       if transaction? # use provided connection
         cn = acquire: (callback) -> callback null, transaction.connection
       else # acquire new connection from pool
-        cn = @pool
+        cn = @ctor._cache[dbconn].pool
       cn.acquire (err, connection) =>
         if err?
           console.log @error_msg err, query, params
@@ -381,7 +388,7 @@ class MSSQL
   start_transaction: (cleanup) =>
     cleanup ?= -> # noop function if no TX done/cleanup handler provided
     new Promise (resolve, reject) =>
-      connection = @connection.open()
+      connection = @ctor._cache[dbconn].connection.open()
       connection.on 'connect', (err) ->
         return reject err if err?
         connection.transaction (err, _done) ->
@@ -395,7 +402,7 @@ class MSSQL
       _cleanup = (err, results) ->
         return reject err if err?
         resolve results
-      connection = @connection.open()
+      connection = @ctor._cache[dbconn].connection.open()
       connection.on 'connect', (err) =>
         return reject err if err?
         connection.transaction (err, done) =>
