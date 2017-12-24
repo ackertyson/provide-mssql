@@ -28,10 +28,10 @@ class MSSQL
     # hash connection params to find/create cached connection
     hash = crypto.createHash 'sha256'
     hash.update "#{server}#{user_name}#{password}#{@database}"
-    dbconn = hash.digest 'hex'
+    @hashkey = hash.digest 'hex'
 
-    @ctor._config[dbconn] ?= tedious: null, pool: null
-    @ctor._config[dbconn].tedious ?=
+    @ctor._config[@hashkey] ?= tedious: null, pool: null
+    @ctor._config[@hashkey].tedious ?=
       server: server
       userName: user_name
       password: password
@@ -39,20 +39,20 @@ class MSSQL
         encrypt: true
         database: @database
         useUTC: true
-    @ctor._config[dbconn].pool ?=
+    @ctor._config[@hashkey].pool ?=
       min: 2
       max: 10
     options = Model.prototype?.config or {}
     pool_options = options.pool or {}
     has_custom_config = (Object.keys(options).length + Object.keys(pool_options).length) > 0
     if Object.keys(pool_options).length > 0
-      @ctor._config[dbconn].pool[k] = v for own k, v of pool_options # add'l config for ConnectionPool
+      @ctor._config[@hashkey].pool[k] = v for own k, v of pool_options # add'l config for ConnectionPool
       delete options.pool
-    @ctor._config[dbconn].tedious.options[k] = v for own k, v of options # add'l config for Tedious
+    @ctor._config[@hashkey].tedious.options[k] = v for own k, v of options # add'l config for Tedious
 
-    { tedious, pool } = @ctor._config[dbconn]
-    if !@ctor._cache[dbconn]? or has_custom_config # overwrite existing defs with cumulative custom config
-      @ctor._cache[dbconn] =
+    { tedious, pool } = @ctor._config[@hashkey]
+    if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
+      @ctor._cache[@hashkey] =
         connection: open: -> new Connection tedious
         pool: new ConnectionPool pool, tedious
 
@@ -362,7 +362,7 @@ class MSSQL
       if transaction? # use provided connection
         cn = acquire: (callback) -> callback null, transaction.connection
       else # acquire new connection from pool
-        cn = @ctor._cache[dbconn].pool
+        cn = @ctor._cache[@hashkey].pool
       cn.acquire (err, connection) =>
         if err?
           console.log @error_msg err, query, params
@@ -388,7 +388,7 @@ class MSSQL
   start_transaction: (cleanup) =>
     cleanup ?= -> # noop function if no TX done/cleanup handler provided
     new Promise (resolve, reject) =>
-      connection = @ctor._cache[dbconn].connection.open()
+      connection = @ctor._cache[@hashkey].connection.open()
       connection.on 'connect', (err) ->
         return reject err if err?
         connection.transaction (err, _done) ->
@@ -402,7 +402,7 @@ class MSSQL
       _cleanup = (err, results) ->
         return reject err if err?
         resolve results
-      connection = @ctor._cache[dbconn].connection.open()
+      connection = @ctor._cache[@hashkey].connection.open()
       connection.on 'connect', (err) =>
         return reject err if err?
         connection.transaction (err, done) =>

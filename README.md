@@ -65,7 +65,7 @@ refers to the local class).
 
 ## Tedious config
 
-Additional Tedious configuration options (passed to the Tedious contructor as
+Additional Tedious configuration options (passed to the Tedious constructor as
 `config.options`) may be defined on the model as a `config` block; including a
 `pool` object will pass those values to the ConnectionPool constructor:
 
