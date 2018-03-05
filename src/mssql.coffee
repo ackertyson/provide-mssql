@@ -68,6 +68,10 @@ class MSSQL
   lte: (value) -> ['<=', value]
   neq: (value) -> ['<>', value]
   starts_with: (value) -> ['LIKE', "#{value}%"]
+  
+  # Added hack to support casting column
+  cast_gte: (value, type) -> ['>=', value, 'CAST', type]
+  cast_lte: (value, type) -> ['>=', value, 'CAST', type]
 
 
   build_param: (name, type, value, options) ->
@@ -217,12 +221,18 @@ class MSSQL
         [table, column] = table_column.split '.'
         table = @table_name if table is '@'
         [comparator, value] = criterion
+        if criterion[2] and criterion[3]
+          cast = criterion[2] + '('
+          cast_type = 'AS ' + criterion[3] + ')'
+        else
+          cast = ''
+          cast_type = ''
         if !value? # IS [NOT] NULL
           where_clause += " #{oper} [#{table}].[#{column}] #{comparator}"
         else
           [param_name, parameters] = @parameterize table, column, value, i
           param_name = "(#{param_name})" if comparator is 'IN'
-          where_clause += " #{oper} [#{table}].[#{column}] #{comparator} #{param_name}"
+          where_clause += " #{oper} #{cast} [#{table}].[#{column}] #{cast_type} #{comparator} #{param_name}"
           Array::push.apply sql_params, parameters
         where_clause = where_clause.trim()
         oper = 'AND'
