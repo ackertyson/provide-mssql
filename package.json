@@ -1,6 +1,6 @@
 {
   "name": "provide-mssql",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "description": "Convenience layer for MSSQL/Tedious DB in Express app",
   "homepage": "http://providejs.com/",
   "repository": {
@@ -34,3 +34,4 @@
     "sinon": "^1.17.6"
   }
 }
+
