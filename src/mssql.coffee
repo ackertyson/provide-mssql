@@ -71,7 +71,7 @@ class MSSQL
   
   # Added hack to support casting column
   cast_gte: (value, type) -> ['>=', value, 'CAST', type]
-  cast_lte: (value, type) -> ['>=', value, 'CAST', type]
+  cast_lte: (value, type) -> ['<=', value, 'CAST', type]
 
 
   build_param: (name, type, value, options) ->
