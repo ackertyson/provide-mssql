@@ -3,6 +3,7 @@ crypto = require 'crypto'
 tedious = require 'tedious'
 Request = tedious.Request
 TYPES = tedious.TYPES
+simple_type_list = (name.toLowerCase() for name, def of TYPES)
 Connection = tedious.Connection
 ConnectionPool = require 'tedious-connection-pool'
 
@@ -61,6 +62,9 @@ class MSSQL
 
 
   # WHERE clause operators
+  cast: (expr, type) ->
+    expr.push type
+    expr
   contains: (value) -> ['LIKE', "%#{value}%"]
   ends_with: (value) -> ['LIKE', "%#{value}"]
   eq: (value) -> ['=', value]
@@ -69,8 +73,8 @@ class MSSQL
   in: (values) ->
     values = [values] unless @typeof values, 'array'
     ['IN', values]
-  is_not_null: -> ['IS NOT NULL']
-  is_null: -> ['IS NULL']
+  is_not_null: -> ['IS NOT NULL', null]
+  is_null: -> ['IS NULL', null]
   lt: (value) -> ['<', value]
   lte: (value) -> ['<=', value]
   neq: (value) -> ['<>', value]
@@ -223,13 +227,16 @@ class MSSQL
             oper = 'AND' unless oper in ['AND', 'OR']
         [table, column] = table_column.split '.'
         table = @table_name if table is '@'
-        [comparator, value] = criterion
+        [comparator, value, cast_type] = criterion
         if !value? # IS [NOT] NULL
           where_clause += " #{oper} [#{table}].[#{column}] #{comparator}"
         else
           [param_name, parameters] = @parameterize table, column, value, i
           param_name = "(#{param_name})" if comparator is 'IN'
-          where_clause += " #{oper} [#{table}].[#{column}] #{comparator} #{param_name}"
+          expr = "[#{table}].[#{column}]"
+          if cast_type?.toLowerCase? and cast_type.toLowerCase() in simple_type_list
+            expr = "CAST(#{expr} AS #{cast_type})"
+          where_clause += " #{oper} #{expr} #{comparator} #{param_name}"
           Array::push.apply sql_params, parameters
         where_clause = where_clause.trim()
         oper = 'AND'

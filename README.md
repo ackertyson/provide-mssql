@@ -137,20 +137,33 @@ OR table2.first_name LIKE '%sephina%'
 You can pass 'OR' as an optional first array element in a where subclause;
 default is `AND`.
 
+You can CAST columns in the where clause like this:
+
 ```
-WHERE clause comparators:
-  contains: LIKE '%___%'
-  ends_with: LIKE '%___'
-  eq: =
-  gt: >
-  gte: >=
-  in: IN (<array>)
-  is_not_null: IS NOT NULL
-  is_null: IS NULL
-  lt: <
-  lte: <=
-  neq: <>
-  starts_with: LIKE '___%'
+where: [
+  ['@.some_id', model.cast model.eq(1234), 'tinyint']
+  ['OR', 'table2.first_name', model.contains 'sephina']
+]
+
+WHERE CAST(<base_table>.some_id AS tinyint) = 1234
+OR table2.first_name LIKE '%sephina%'
+```
+
+Here are the available comparator functions:
+
+```
+contains: LIKE '%___%'
+ends_with: LIKE '%___'
+eq: =
+gt: >
+gte: >=
+in: IN (<array>)
+is_not_null: IS NOT NULL
+is_null: IS NULL
+lt: <
+lte: <=
+neq: <>
+starts_with: LIKE '___%'
 ```
 
 See `test/mssql.coffee` for more query examples. If you run into a query that

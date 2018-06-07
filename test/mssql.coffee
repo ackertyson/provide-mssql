@@ -204,6 +204,26 @@ describe 'MSSQL', ->
       params.should.have.length 1
       params[0].value.should.equal 1234
 
+    it 'should build query with WHERE...IS NULL', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.is_null()]
+        ]
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] IS NULL"
+      params.should.have.length 0
+
+    it 'should ignore CAST with WHERE...IS NULL', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.cast @mssql.is_null(), 'tinyint']
+        ]
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] IS NULL"
+      params.should.have.length 0
+
     it 'should build query with WHERE...IN', ->
       [query, params] = @mssql.build_query
         select:
@@ -299,6 +319,39 @@ describe 'MSSQL', ->
         ]
       query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00 AND [table1].[name] < @table1name10"
       params.should.have.length 2
+      params[0].value.should.equal 1234
+
+    it 'should build query with WHERE and CAST', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.cast @mssql.eq(1234), 'tinyint']
+        ]
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE CAST([test].[_id] AS tinyint) = @id00"
+      params.should.have.length 1
+      params[0].value.should.equal 1234
+
+    it 'should ignore invalid CAST type', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.cast @mssql.eq(1234), 'fake']
+        ]
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00"
+      params.should.have.length 1
+      params[0].value.should.equal 1234
+
+    it 'should handle missing CAST type', ->
+      [query, params] = @mssql.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @mssql.cast @mssql.eq(1234)]
+        ]
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] = @id00"
+      params.should.have.length 1
       params[0].value.should.equal 1234
 
     it 'should build query with JOIN, WHERE and ORDER BY', ->
