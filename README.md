@@ -172,6 +172,7 @@ is_null: IS NULL
 lt: <
 lte: <=
 neq: <>
+nin: NOT IN (<array>)
 starts_with: LIKE '___%'
 ```
 
