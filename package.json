@@ -12,6 +12,7 @@
     "dist/"
   ],
   "scripts": {
+    "prepublishOnly": "gulp build && npm test",
     "test": "NODE_ENV=test gulp test"
   },
   "author": "tyson@devmode.com",
