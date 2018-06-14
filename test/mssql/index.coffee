@@ -369,6 +369,28 @@ describe 'MSSQL', ->
       params.should.have.length 1
       params[0].value.should.equal 3
 
+    it 'should build query with WHERE...NOT IN', ->
+      [query, params] = @model.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @MSSQL.nin [3,4]]
+        ]
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] NOT IN (@id00,@id01)"
+      params.should.have.length 2
+      params[1].value.should.equal 4
+
+    it 'should build query with nonarray WHERE...NOT IN', ->
+      [query, params] = @model.build_query
+        select:
+          table1: ['column1']
+        where: [
+          ['@._id', @MSSQL.nin 3]
+        ]
+      query.should.equal "SELECT [table1].[column1],[test].* FROM [table1],[test]  WHERE [test].[_id] NOT IN (@id00)"
+      params.should.have.length 1
+      params[0].value.should.equal 3
+
     it 'should build query with WHERE...LIKE', ->
       [query, params] = @model.build_query
         select:
