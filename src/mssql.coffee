@@ -67,16 +67,6 @@ class MSSQL
   starts_with: (value) -> ['LIKE', "#{value}%"]
 
 
-  connect: () =>
-    config = @ctor._config[@hashkey]
-    sql.on 'error', console.error 
-    sql.connect(config).then pool =>
-      if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
-        @ctor._cache[@hashkey] =
-          pool: pool,
-          transaction: () -> new sql.Transaction(pool)
-
-
   build_param: (name, type, value, options) ->
     { name: name, type: type, value: value, options: options }
 
@@ -277,6 +267,31 @@ class MSSQL
     d.toISOString()
 
 
+  connect: () ->
+    return Promise.resolve(@ctor._cache[@hashkey]) if @ctor._cache[@hashkey]?
+
+    new Promise (resolve) =>
+      return setTimeout(@connect.bind(@), 200) if @connecting 
+
+      @connecting = true
+      config = @ctor._config[@hashkey]
+      tds = config.tedious
+      tds.pool = config.pool
+      sql.on 'error', console.error 
+
+      sql.connect(tds)
+        .then (pool) =>
+          if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
+            @ctor._cache[@hashkey] =
+              pool: pool,
+              transaction: () -> new sql.Transaction(pool)
+          resolve @ctor._cache[@hashkey]
+        .catch (err) =>
+          console.error(err)
+          console.error 'Trying again...'
+          setTimeout @connect.bind(@), 1000
+
+
   end_transaction: (tx) -> 
     (err) ->
       return tx.rollback() if err?
@@ -298,12 +313,12 @@ class MSSQL
   _execStmt: (name, req, query, params=[]) ->
     for param in params
       param.value = JSON.stringify(param.value) if @typeof param.value, 'object'
-      if TYPES[param.type]?
-        req.input param.name, TYPES[param.type], param.value, param.options
-      else
-        msg = if param?.type? then 'No such TDS datatype: '+param.type.toString() else 'Malformed param: '+param
-        return Promise.reject new Error msg
-    req.query(query).then(res -> { name, data: res.recordset })
+      options = param.options
+      # OPTIONS become args to TYPE() if they exist, otherwise use string TYPE
+      type = if options? then sql[param.type]?(options...) else sql[param.type]
+      req.input param.name, type, param.value
+    req.query(query).then (res) ->
+      { name, data: res.recordset }
 
 
   mssql_date_string: (date) ->
@@ -344,23 +359,23 @@ class MSSQL
 
 
   request: (query, params=[], transaction) =>
-    new Promise (resolve, reject) =>
+    @connect().then (connection) =>
       try
         [query, params] = @build_query query if @typeof query, 'object'
       catch ex
         console.log @error_msg ex, query, params
-        reject ex
+        return Promise.reject ex
       data = []
       if transaction? # use provided connection
         req = new sql.Request(transaction.tx)
       else # acquire new connection from pool
-        req = @ctor._cache[@hashkey].pool.request()
+        req = connection.pool.request()
       @_execStmt(null, req, query, params).then (result) ->
-        resolve result.data
+        result.data
       .catch (err) =>
         return transaction.done(err) if transaction?
         console.log @error_msg err, query, params
-        reject err
+        Promise.reject err
 
 
   sanitize: (body) ->
