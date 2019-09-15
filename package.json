@@ -12,6 +12,7 @@
     "dist/"
   ],
   "scripts": {
+    "prepublishOnly": "grunt && npm test",
     "test": "grunt test",
     "version": "grunt"
   },
@@ -19,9 +20,8 @@
   "license": "ISC",
   "dependencies": {
     "async": "^2.3.0",
-    "provide-model": "^0.1.4",
-    "tedious": "^1.14.0",
-    "tedious-connection-pool": "^1.0.5"
+    "mssql": "^5.1.0",
+    "provide-model": "^0.1.4"
   },
   "devDependencies": {
     "chai": "^3.5.0",

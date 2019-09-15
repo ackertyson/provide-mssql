@@ -1,10 +1,6 @@
 each = require 'async/eachOfSeries'
 crypto = require 'crypto'
-tedious = require 'tedious'
-Request = tedious.Request
-TYPES = tedious.TYPES
-Connection = tedious.Connection
-ConnectionPool = require 'tedious-connection-pool'
+sql = require 'mssql'
 
 class MSSQL
   @_cache: {} # static DB connection cache
@@ -33,11 +29,11 @@ class MSSQL
     @ctor._config[@hashkey] ?= tedious: null, pool: null
     @ctor._config[@hashkey].tedious ?=
       server: server
-      userName: user_name
+      database: @database
+      user: user_name
       password: password
       options:
         encrypt: true
-        database: @database
         useUTC: true
     @ctor._config[@hashkey].pool ?=
       min: 2
@@ -49,12 +45,6 @@ class MSSQL
       @ctor._config[@hashkey].pool[k] = v for own k, v of pool_options # add'l config for ConnectionPool
       delete options.pool
     @ctor._config[@hashkey].tedious.options[k] = v for own k, v of options # add'l config for Tedious
-
-    { tedious, pool } = @ctor._config[@hashkey]
-    if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
-      @ctor._cache[@hashkey] =
-        connection: open: -> new Connection tedious
-        pool: new ConnectionPool pool, tedious
 
     Date::to_mssql_string = () ->
       @getUTCFullYear()+'-'+@_pad(@getUTCMonth()+1)+'-'+@_pad(@getUTCDate())+' '+@_pad(@getUTCHours())+':'+@_pad(@getUTCMinutes())+':'+@_pad(@getUTCSeconds())
@@ -75,6 +65,16 @@ class MSSQL
   lte: (value) -> ['<=', value]
   neq: (value) -> ['<>', value]
   starts_with: (value) -> ['LIKE', "#{value}%"]
+
+
+  connect: () =>
+    config = @ctor._config[@hashkey]
+    sql.on 'error', console.error 
+    sql.connect(config).then pool =>
+      if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
+        @ctor._cache[@hashkey] =
+          pool: pool,
+          transaction: () -> new sql.Transaction(pool)
 
 
   build_param: (name, type, value, options) ->
@@ -277,6 +277,12 @@ class MSSQL
     d.toISOString()
 
 
+  end_transaction: (tx) -> 
+    (err) ->
+      return tx.rollback() if err?
+      tx.commit();
+
+
   error_msg: (err, query, params=[]) ->
     ps = ''
     for param in params
@@ -289,29 +295,15 @@ class MSSQL
       PARAMS:\n#{ps}"""
 
 
-  _execStmt: (name, connection, query, params=[]) ->
-    new Promise (resolve, reject) =>
-      results = { name: name, data: [] }
-      request = new Request query, (err, count) ->
-        return reject err if err?
-        resolve results
-
-      for param in params
-        param.value = JSON.stringify(param.value) if @typeof param.value, 'object'
-        if TYPES[param.type]?
-          request.addParameter param.name, TYPES[param.type], param.value, param.options
-        else
-          msg = if param?.type? then 'No such TDS datatype: '+param.type.toString() else 'Malformed param: '+param
-          reject new Error msg
-
-      request.on 'row', (columns) =>
-        row = {}
-        columns.forEach (column) =>
-          column.value = column.value.trim() if @typeof column.value, 'string'
-          row[column.metadata.colName.toLowerCase()] = column.value
-        results.data.push row
-
-      connection.execSql request
+  _execStmt: (name, req, query, params=[]) ->
+    for param in params
+      param.value = JSON.stringify(param.value) if @typeof param.value, 'object'
+      if TYPES[param.type]?
+        req.input param.name, TYPES[param.type], param.value, param.options
+      else
+        msg = if param?.type? then 'No such TDS datatype: '+param.type.toString() else 'Malformed param: '+param
+        return Promise.reject new Error msg
+    req.query(query).then(res -> { name, data: res.recordset })
 
 
   mssql_date_string: (date) ->
@@ -360,21 +352,15 @@ class MSSQL
         reject ex
       data = []
       if transaction? # use provided connection
-        cn = acquire: (callback) -> callback null, transaction.connection
+        req = new sql.Request(transaction.tx)
       else # acquire new connection from pool
-        cn = @ctor._cache[@hashkey].pool
-      cn.acquire (err, connection) =>
-        if err?
-          console.log @error_msg err, query, params
-          return reject err
-        @_execStmt(null, connection, query, params).then (result) ->
-          connection.release() if connection.release? # release pool connection
-          resolve result.data
-        .catch (err) =>
-          connection.release() if connection.release? # release pool connection
-          return transaction.done err if transaction? # let TX handle errors/cleanup
-          console.log @error_msg err, query, params
-          reject err
+        req = @ctor._cache[@hashkey].pool.request()
+      @_execStmt(null, req, query, params).then (result) ->
+        resolve result.data
+      .catch (err) =>
+        return transaction.done(err) if transaction?
+        console.log @error_msg err, query, params
+        reject err
 
 
   sanitize: (body) ->
@@ -385,42 +371,30 @@ class MSSQL
     sanitized
 
 
-  start_transaction: (cleanup) =>
-    cleanup ?= -> # noop function if no TX done/cleanup handler provided
-    new Promise (resolve, reject) =>
-      connection = @ctor._cache[@hashkey].connection.open()
-      connection.on 'connect', (err) ->
-        return reject err if err?
-        connection.transaction (err, _done) ->
-          return reject err if err?
-          done = (err) -> _done err, cleanup
-          resolve { connection, done }
+  start_transaction: () =>
+    transaction = @ctor._cache[@hashkey].pool.transaction()
+    transaction.begin()
+      .then () -> { tx: transaction, done: @end_transaction(transaction) }
 
 
   transaction: (queries) =>
     new Promise (resolve, reject) =>
-      _cleanup = (err, results) ->
-        return reject err if err?
-        resolve results
-      connection = @ctor._cache[@hashkey].connection.open()
-      connection.on 'connect', (err) =>
-        return reject err if err?
-        connection.transaction (err, done) =>
-          return reject err if err?
-          results = {}
-          each queries, ({ name, query, params }, index, next) =>
-            try
-              [query, params] = @build_query query if @typeof query, 'object'
-            catch ex
-              return next ex
-            name ?= index
-            params ?= []
-            @_execStmt(name, { connection }, query, params).then (result) ->
-              results[result.name] = result.data
-              next()
-            .catch next
-          , (err) -> # call TX callback with async/each result
-            done err, _cleanup, results
+      transaction = @ctor._cache[@hashkey].pool.transaction()
+      transaction.begin().then () =>
+        results = {}
+        done = @end_transaction(transaction)
+        each queries, ({ name, query, params }, index, next) =>
+          try
+            [query, params] = @build_query query if @typeof query, 'object'
+          catch ex
+            return next ex
+          name ?= index
+          params ?= []
+          @_execStmt(name, transaction.request, query, params).then (result) ->
+            results[result.name] = result.data
+            next()
+          .catch next
+        , done # call TX callback with async/each result
 
 
   typeof: (subject, type) ->
