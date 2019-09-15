@@ -6,6 +6,7 @@ class MSSQL
   @_cache: {} # static DB connection cache
   @_config: {} # static DB connection cache
   @_all_schema: {} # static SCHEMA store of all models
+  @_status: {} # connection status
 
   constructor: (Model, server, user_name, password, @database) ->
     server ?= process.env.SQL_SERVER
@@ -38,6 +39,7 @@ class MSSQL
     @ctor._config[@hashkey].pool ?=
       min: 2
       max: 10
+    @ctor._status[@hashkey] ?= {}
     options = Model.prototype?.config or {}
     pool_options = options.pool or {}
     has_custom_config = (Object.keys(options).length + Object.keys(pool_options).length) > 0
@@ -268,28 +270,30 @@ class MSSQL
 
 
   connect: () ->
-    return Promise.resolve(@ctor._cache[@hashkey]) if @ctor._cache[@hashkey]?
-
     new Promise (resolve) =>
-      return setTimeout(@connect.bind(@), 200) if @connecting 
+      _connect = () =>
+        return resolve(@ctor._cache[@hashkey]) if @ctor._cache[@hashkey]?
 
-      @connecting = true
-      config = @ctor._config[@hashkey]
-      tds = config.tedious
-      tds.pool = config.pool
-      sql.on 'error', console.error 
+        return setTimeout(_connect.bind(@), 200) if @ctor._status[@hashkey].connecting
 
-      sql.connect(tds)
-        .then (pool) =>
-          if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
-            @ctor._cache[@hashkey] =
-              pool: pool,
-              transaction: () -> new sql.Transaction(pool)
-          resolve @ctor._cache[@hashkey]
-        .catch (err) =>
-          console.error(err)
-          console.error 'Trying again...'
-          setTimeout @connect.bind(@), 1000
+        @ctor._status[@hashkey].connecting = true
+        config = @ctor._config[@hashkey]
+        tds = config.tedious
+        tds.pool = config.pool
+        sql.on 'error', console.error 
+
+        sql.connect(tds)
+          .then (pool) =>
+            if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
+              @ctor._cache[@hashkey] =
+                pool: pool,
+                transaction: () -> new sql.Transaction(pool)
+            resolve @ctor._cache[@hashkey]
+          .catch (err) =>
+            console.error(err)
+            console.error 'Trying again...'
+            setTimeout @connect.bind(@), 1000
+      _connect()
 
 
   end_transaction: (tx) -> 
@@ -359,7 +363,7 @@ class MSSQL
 
 
   request: (query, params=[], transaction) =>
-    @connect().then (connection) =>
+    @connect(query).then (connection) =>
       try
         [query, params] = @build_query query if @typeof query, 'object'
       catch ex
