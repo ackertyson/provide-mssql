@@ -39,10 +39,10 @@ class MSSQL
     @ctor._config[@hashkey].pool ?=
       min: 2
       max: 10
-    @ctor._status[@hashkey] ?= {}
     options = Model.prototype?.config or {}
     pool_options = options.pool or {}
-    has_custom_config = (Object.keys(options).length + Object.keys(pool_options).length) > 0
+    @ctor._status[@hashkey] ?= {}
+    @ctor._status[@hashkey].has_custom_config = (Object.keys(options).length + Object.keys(pool_options).length) > 0
     if Object.keys(pool_options).length > 0
       @ctor._config[@hashkey].pool[k] = v for own k, v of pool_options # add'l config for ConnectionPool
       delete options.pool
@@ -270,7 +270,7 @@ class MSSQL
 
 
   connect: () ->
-    new Promise (resolve) =>
+    new Promise (resolve, reject) =>
       _connect = () =>
         return resolve(@ctor._cache[@hashkey]) if @ctor._cache[@hashkey]?
 
@@ -284,15 +284,12 @@ class MSSQL
 
         sql.connect(tds)
           .then (pool) =>
-            if !@ctor._cache[@hashkey]? or has_custom_config # overwrite existing defs with cumulative custom config
+            if !@ctor._cache[@hashkey]? or @ctor._status[@hashkey].has_custom_config # overwrite existing defs with cumulative custom config
               @ctor._cache[@hashkey] =
                 pool: pool,
                 transaction: () -> new sql.Transaction(pool)
             resolve @ctor._cache[@hashkey]
-          .catch (err) =>
-            console.error(err)
-            console.error 'Trying again...'
-            setTimeout @connect.bind(@), 1000
+          .catch reject
       _connect()
 
 
