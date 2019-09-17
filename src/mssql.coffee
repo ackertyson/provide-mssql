@@ -360,15 +360,16 @@ class MSSQL
 
 
   request: (query, params=[], transaction) =>
-    @connect(query).then (connection) =>
+    @connect().then (connection) =>
       try
         [query, params] = @build_query query if @typeof query, 'object'
       catch ex
         console.log @error_msg ex, query, params
+        transaction.done(ex) if transaction?
         return Promise.reject ex
       data = []
       if transaction? # use provided connection
-        req = new sql.Request(transaction.tx)
+        req = transaction.tx.request()
       else # acquire new connection from pool
         req = connection.pool.request()
       @_execStmt(null, req, query, params).then (result) ->
@@ -388,29 +389,34 @@ class MSSQL
 
 
   start_transaction: () =>
-    transaction = @ctor._cache[@hashkey].pool.transaction()
-    transaction.begin()
-      .then () -> { tx: transaction, done: @end_transaction(transaction) }
+    @connect().then (connection) =>
+      transaction = connection.pool.transaction()
+      transaction.begin()
+        .then () => { tx: transaction, done: @end_transaction(transaction) }
 
 
   transaction: (queries) =>
     new Promise (resolve, reject) =>
-      transaction = @ctor._cache[@hashkey].pool.transaction()
-      transaction.begin().then () =>
-        results = {}
-        done = @end_transaction(transaction)
-        each queries, ({ name, query, params }, index, next) =>
-          try
-            [query, params] = @build_query query if @typeof query, 'object'
-          catch ex
-            return next ex
-          name ?= index
-          params ?= []
-          @_execStmt(name, transaction.request, query, params).then (result) ->
-            results[result.name] = result.data
-            next()
-          .catch next
-        , done # call TX callback with async/each result
+      @connect().then (connection) =>
+        transaction = connection.pool.transaction()
+        transaction.begin().then () =>
+          results = {}
+          done = @end_transaction(transaction)
+          each queries, ({ name, query, params }, index, next) =>
+            try
+              [query, params] = @build_query query if @typeof query, 'object'
+            catch ex
+              return next ex
+            name ?= index
+            params ?= []
+            @_execStmt(name, transaction.request(), query, params).then (result) ->
+              results[result.name] = result.data
+              next()
+            .catch next
+          , (err) ->
+              done(err) # call TX callback with async/each result
+              return reject(err) if err?
+              resolve(results)
 
 
   typeof: (subject, type) ->
