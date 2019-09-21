@@ -1,7 +1,8 @@
 # provide-mssql
 
-JSON model layer for Microsoft SQL Server (via Tedious) database in Express
-apps.
+JSON model layer for Microsoft SQL Server database in Express apps.
+
+Version 0.3.4 uses `node-mssql` instead of `tedious`/`tedious-connection-pool` but retains the same API as v0.3.3
 
 BREAKING CHANGES in v0.3.0:
 
