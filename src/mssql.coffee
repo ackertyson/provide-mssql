@@ -47,6 +47,8 @@ class MSSQL
       @ctor._config[@hashkey].pool[k] = v for own k, v of pool_options # add'l config for ConnectionPool
       delete options.pool
     @ctor._config[@hashkey].tedious.options[k] = v for own k, v of options # add'l config for Tedious
+    # massage certain config options to match 'mssql' expectations
+    @ctor._config[@hashkey].tedious[k] = v for own k, v of options when k in ['port', 'connectionTimeout', 'requestTimeout', 'domain', 'stream', 'parseJSON']
 
     Date::to_mssql_string = () ->
       @getUTCFullYear()+'-'+@_pad(@getUTCMonth()+1)+'-'+@_pad(@getUTCDate())+' '+@_pad(@getUTCHours())+':'+@_pad(@getUTCMinutes())+':'+@_pad(@getUTCSeconds())
