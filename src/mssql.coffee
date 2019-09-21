@@ -269,7 +269,7 @@ class MSSQL
     d.toISOString()
 
 
-  connect: () ->
+  connect: () -> # private method; don't invoke directly
     new Promise (resolve, reject) =>
       _connect = () =>
         return resolve(@ctor._cache[@hashkey]) if @ctor._cache[@hashkey]?
